@@ -1,6 +1,7 @@
 package com.easycloud.controller.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.easycloud.common.LanzouResolver;
 import com.easycloud.entity.App;
 import com.easycloud.entity.AppFile;
 import com.easycloud.mapper.AppFileMapper;
@@ -45,7 +46,7 @@ public class GetfileHandler {
 
             // 处理蓝奏云链接
             if ("lanzou".equals(file.getType())) {
-                fileUrl = resolveLanzouUrl(fileUrl, file.getLanzouPass());
+                fileUrl = LanzouResolver.resolve(fileUrl, file.getLanzouPass());
             }
 
             Map<String, Object> item = new LinkedHashMap<>();
@@ -60,16 +61,5 @@ public class GetfileHandler {
             return ApiController.buildErrorResponse(201, "该应用下无外链", app, null);
         }
         return ApiController.buildSuccessResponse(fileList, app, null);
-    }
-
-    private String resolveLanzouUrl(String url, String pwd) {
-        try {
-            // 蓝奏云链接解析 - 简化版，返回原始URL
-            // 实际需要复杂的爬虫逻辑
-            return url;
-        } catch (Exception e) {
-            log.warn("解析蓝奏云链接失败: {}", url, e);
-            return url;
-        }
     }
 }

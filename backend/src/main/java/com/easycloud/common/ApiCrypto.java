@@ -322,8 +322,9 @@ public class ApiCrypto {
     }
 
     /**
-     * 解析 key=value& 格式字符串为 Map
-     * 例如: "name=test&age=18&" -> {name: "test", age: "18"}
+     * 解析 key=value& 格式字符串为 Map - 精确复刻 PHP txt_Arr()
+     * PHP: explode('&') 后对每段 explode('=')，仅保留恰好 2 个元素的
+     * 注意: PHP 会丢弃 value 中包含 = 的键值对
      *
      * @param text key=value& 格式字符串
      * @return 参数 Map（保持插入顺序）
@@ -333,17 +334,12 @@ public class ApiCrypto {
         if (text == null || text.isEmpty()) {
             return map;
         }
-        // 去掉末尾的 &
-        if (text.endsWith("&")) {
-            text = text.substring(0, text.length() - 1);
-        }
         String[] pairs = text.split("&");
         for (String pair : pairs) {
-            int idx = pair.indexOf('=');
-            if (idx > 0) {
-                String key = pair.substring(0, idx);
-                String value = idx < pair.length() - 1 ? pair.substring(idx + 1) : "";
-                map.put(key, value);
+            // PHP: $tmp_arr = explode('=',$value); if(count($tmp_arr) == 2)
+            String[] parts = pair.split("=", -1);
+            if (parts.length == 2) {
+                map.put(parts[0], parts[1]);
             }
         }
         return map;
