@@ -71,7 +71,10 @@ public class ApiController {
             return;
         }
 
-        // 白名单接口直接处理（不更新调用次数、不解密、不验签）
+        // 更新调用次数（PHP api.php 对所有接口都更新）
+        appMapper.updateTotal(appId);
+
+        // 白名单接口直接处理（不解密、不验签）
         if (WHITE_LIST.contains(api)) {
             Map<String, String> dataArr = collectParams(request);
             Object result = routeApi(api, action, app, dataArr, request);
@@ -80,9 +83,6 @@ public class ApiController {
             writeResponse(response, json);
             return;
         }
-
-        // 更新调用次数（仅非白名单接口）
-        appMapper.updateTotal(appId);
 
         // 非白名单接口 - 需要解密/验证
         Map<String, String> dataArr;
@@ -240,7 +240,7 @@ public class ApiController {
             case "kmunmachine":
                 return kmunmachineHandler.handle(app, dataArr, request);
             default:
-                return buildJsonResponseMap(100, "请绑定应用ID", app, null, value);
+                return buildJsonResponseMap(100, "请绑定应用ID", app, null, null);
         }
     }
 

@@ -15,7 +15,7 @@ export function getAppList(params) {
 }
 
 export function getApp(id) {
-  return request.get(`/admin/app/${id}`)
+  return request.get(`/api/admin/app/${id}`)
 }
 
 export function createApp(data) {
@@ -23,19 +23,19 @@ export function createApp(data) {
 }
 
 export function updateApp(id, data) {
-  return request.put(`/admin/app/${id}`, data)
+  return request.put(`/api/admin/app/${id}`, data)
 }
 
 export function deleteApp(id) {
-  return request.delete(`/admin/app/${id}`)
+  return request.delete(`/api/admin/app/${id}`)
 }
 
 export function toggleApp(id, field, value) {
-  return request.post(`/admin/app/${id}/toggle`, { field, value })
+  return request.post(`/api/admin/app/${id}/toggle`, { field, value })
 }
 
 export function regenAppKey(id) {
-  return request.post(`/admin/app/${id}/regenkey`)
+  return request.post(`/api/admin/app/${id}/regenkey`)
 }
 
 export function batchApp(action, ids) {
@@ -52,15 +52,15 @@ export function generateKm(data) {
 }
 
 export function deleteKm(id) {
-  return request.delete(`/admin/km/${id}`)
+  return request.delete(`/api/admin/km/${id}`)
 }
 
 export function toggleKm(id, value) {
-  return request.post(`/admin/km/${id}/toggle`, { value })
+  return request.post(`/api/admin/km/${id}/toggle`, { value })
 }
 
 export function unbindKm(id) {
-  return request.post(`/admin/km/${id}/unbind`)
+  return request.post(`/api/admin/km/${id}/unbind`)
 }
 
 export function batchKm(action, ids) {
@@ -81,11 +81,11 @@ export function createFile(data) {
 }
 
 export function updateFile(id, data) {
-  return request.put(`/admin/file/${id}`, data)
+  return request.put(`/api/admin/file/${id}`, data)
 }
 
 export function deleteFile(id) {
-  return request.delete(`/admin/file/${id}`)
+  return request.delete(`/api/admin/file/${id}`)
 }
 
 export function batchFile(action, ids) {

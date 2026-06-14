@@ -229,6 +229,9 @@ public class ApiCrypto {
             case 4:
                 // RSA 私钥解密
                 return rsaDecrypt(data, privateKey);
+            case 5:
+                // Base64v2 解码（与 miType=2 相同）
+                return new String(java.util.Base64.getDecoder().decode(data), StandardCharsets.UTF_8);
             default:
                 throw new IllegalArgumentException("Unknown miType: " + miType);
         }
@@ -272,6 +275,9 @@ public class ApiCrypto {
             case 4:
                 // AES-128-CBC (PHP输出侧miType=4用AES，非RSA)
                 return aesEncrypt(data, rc4Key);
+            case 5:
+                // Base64v2 编码（与 miType=2 相同）
+                return java.util.Base64.getEncoder().encodeToString(data.getBytes(StandardCharsets.UTF_8));
             default:
                 throw new IllegalArgumentException("Unknown miType: " + miType);
         }

@@ -42,7 +42,7 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
 
     private void writeError(HttpServletResponse response, int code, String msg) throws Exception {
         response.setContentType("application/json;charset=UTF-8");
-        response.setStatus(200);
+        response.setStatus(code);
         response.getWriter().write(objectMapper.writeValueAsString(Result.fail(code, msg)));
     }
 }

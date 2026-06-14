@@ -126,7 +126,7 @@ public class KmlogonHandler {
                 endTime = String.valueOf(now + 86400L);
             }
 
-            boolean success = appKmMapper.updateKmLogin(km.getId(), now, markcode, endTime, clientIp, "y");
+            boolean success = appKmMapper.updateKmLogin(km.getId(), now, markcode, endTime, clientIp, "y") > 0;
             if (!success) {
                 return ApiController.buildErrorResponse(201, "登录失败，请重试", app, null);
             }
@@ -175,7 +175,7 @@ public class KmlogonHandler {
         if (km.getUseTime() == null || km.getUseTime() == 0) {
             int newAmount = (amount == SINGLE_UNLIMITED) ? amount : amount - 1;
 
-            boolean success = appKmMapper.updateSingleLogin(km.getId(), now, newAmount, markcode, clientIp, "y");
+            boolean success = appKmMapper.updateSingleLogin(km.getId(), now, newAmount, markcode, clientIp, "y") > 0;
             if (!success) {
                 return ApiController.buildErrorResponse(201, "登录失败，请重试", app, null);
             }
@@ -188,7 +188,9 @@ public class KmlogonHandler {
         }
 
         // 已使用过 - 扣减次数
-        appKmMapper.decreaseAmount(km.getId());
+        if (appKmMapper.decreaseAmount(km.getId()) <= 0) {
+            return ApiController.buildErrorResponse(201, "登录失败，请重试", app, null);
+        }
         String vip = String.valueOf(now + 3600);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("kami", kami);

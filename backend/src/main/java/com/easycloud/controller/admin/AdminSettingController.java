@@ -18,8 +18,8 @@ public class AdminSettingController {
 
     private final ConfigService configService;
 
-    /** 敏感配置项 - 不允许通过接口读取 */
-    private static final Set<String> SENSITIVE_KEYS = Set.of("admin_pwd", "db_pwd", "mail_pwd");
+    /** 敏感配置项 - 不允许通过接口读取或修改 */
+    private static final Set<String> SENSITIVE_KEYS = Set.of("admin_pwd", "admin_user", "db_pwd", "mail_pwd");
 
     /**
      * 获取所有设置
@@ -27,8 +27,10 @@ public class AdminSettingController {
     @GetMapping
     public Result<?> getSettings() {
         Map<String, String> settings = configService.getAllSettings();
-        // 移除敏感信息
-        settings.remove("admin_pwd");
+        // 移除所有敏感信息
+        for (String key : SENSITIVE_KEYS) {
+            settings.remove(key);
+        }
         return Result.ok(settings);
     }
 
@@ -50,10 +52,11 @@ public class AdminSettingController {
     @PostMapping
     public Result<?> saveSettings(@RequestBody Map<String, String> settings) {
         for (Map.Entry<String, String> entry : settings.entrySet()) {
-            // 不允许通过此接口修改密码
-            if (!"admin_pwd".equals(entry.getKey())) {
-                configService.saveSetting(entry.getKey(), entry.getValue());
+            // 不允许通过此接口修改敏感配置
+            if (SENSITIVE_KEYS.contains(entry.getKey())) {
+                continue;
             }
+            configService.saveSetting(entry.getKey(), entry.getValue());
         }
         return Result.ok("保存成功");
     }
