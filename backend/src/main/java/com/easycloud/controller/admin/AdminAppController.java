@@ -10,20 +10,31 @@ import com.easycloud.mapper.AppFileMapper;
 import com.easycloud.mapper.AppKmMapper;
 import com.easycloud.mapper.AppMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 
 /**
  * 应用管理 - 对应 PHP admin/applist.php, appedit.php
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/app")
 @RequiredArgsConstructor
 public class AdminAppController {
+
+    @Value("${app.upload.dir:./uploads/images}")
+    private String uploadDir;
 
     private final AppMapper appMapper;
     private final AppKmMapper appKmMapper;
@@ -66,8 +77,17 @@ public class AdminAppController {
      */
     @PostMapping
     public Result<?> create(@RequestBody App app) {
+        // PHP addapp: 检查应用名是否重复
+        if (app.getName() != null && !app.getName().isEmpty()) {
+            Long existing = appMapper.selectCount(
+                    new LambdaQueryWrapper<App>().eq(App::getName, app.getName()));
+            if (existing > 0) {
+                return Result.fail("应用名称已存在");
+            }
+        }
         app.setDate(LocalDateTime.now());
         app.setTotal("0");
+        if (app.getActive() == null) app.setActive("y");
         if (app.getAppkey() == null || app.getAppkey().isEmpty()) {
             app.setAppkey(generateAppKey());
         }
@@ -80,6 +100,16 @@ public class AdminAppController {
      */
     @PutMapping("/{id}")
     public Result<?> update(@PathVariable Long id, @RequestBody App app) {
+        // PHP appedit: 检查应用名是否重复（排除自身）
+        if (app.getName() != null && !app.getName().isEmpty()) {
+            Long existing = appMapper.selectCount(
+                    new LambdaQueryWrapper<App>()
+                            .eq(App::getName, app.getName())
+                            .ne(App::getId, id));
+            if (existing > 0) {
+                return Result.fail("应用名称已存在");
+            }
+        }
         app.setId(id);
         appMapper.updateById(app);
         return Result.ok("更新成功");
@@ -163,6 +193,54 @@ public class AdminAppController {
         appFileMapper.delete(new LambdaQueryWrapper<AppFile>().eq(AppFile::getAppid, id));
         appMapper.deleteById(id);
         return Result.ok("删除成功");
+    }
+
+    /**
+     * 上传应用图标 - 对应 PHP uploadappimg
+     */
+    @PostMapping("/upload-image")
+    public Result<?> uploadImage(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return Result.fail("请选择文件");
+        }
+
+        // 验证文件类型（PHP: png/jpg/gif/jpeg/webp/bmp）
+        String originalName = file.getOriginalFilename();
+        if (originalName == null) {
+            return Result.fail("文件名无效");
+        }
+        String ext = originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase();
+        Set<String> allowedExts = Set.of("png", "jpg", "jpeg", "gif", "webp", "bmp");
+        if (!allowedExts.contains(ext)) {
+            return Result.fail("不支持的图片格式，仅支持: png/jpg/gif/jpeg/webp/bmp");
+        }
+
+        // 验证文件大小（最大 5MB）
+        if (file.getSize() > 5 * 1024 * 1024) {
+            return Result.fail("文件大小不能超过5MB");
+        }
+
+        try {
+            // 确保上传目录存在
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            // 生成唯一文件名
+            String fileName = UUID.randomUUID().toString().replace("-", "") + "." + ext;
+            Path filePath = uploadPath.resolve(fileName);
+            file.transferTo(filePath.toFile());
+
+            // 返回相对路径
+            String relativePath = "/uploads/images/" + fileName;
+            Map<String, String> data = new HashMap<>();
+            data.put("url", relativePath);
+            return Result.ok("上传成功", data);
+        } catch (IOException e) {
+            log.error("文件上传失败", e);
+            return Result.fail("上传失败: " + e.getMessage());
+        }
     }
 
     /**

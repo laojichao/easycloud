@@ -88,16 +88,56 @@ public class AdminSettingController {
         }
 
         String currentPwd = configService.getSetting("admin_pwd");
+        // 兼容 PHP 明文和 Java md5
         String encryptedOldPwd = md5(oldPwd + "!@#%!s!0");
+        boolean passwordMatch = oldPwd.equals(currentPwd) || encryptedOldPwd.equals(currentPwd);
 
-        if (!encryptedOldPwd.equals(currentPwd)) {
+        if (!passwordMatch) {
             return Result.fail("旧密码错误");
         }
 
         String encryptedNewPwd = md5(newPwd + "!@#%!s!0");
         configService.saveSetting("admin_pwd", encryptedNewPwd);
+        configService.refreshCache();
 
         return Result.ok("密码修改成功");
+    }
+
+    /**
+     * 修改管理员账号 - 对应 PHP set.php mod=account_n
+     */
+    @PostMapping("/change-account")
+    public Result<?> changeAccount(@RequestBody Map<String, String> body) {
+        String newUsername = body.get("username");
+        String oldPwd = body.get("password");
+        String newPwd = body.get("new_password");
+
+        // 验证当前密码
+        if (oldPwd == null || oldPwd.isEmpty()) {
+            return Result.fail("请输入当前密码确认操作");
+        }
+        String currentPwd = configService.getSetting("admin_pwd");
+        String encryptedOldPwd = md5(oldPwd + "!@#%!s!0");
+        boolean passwordMatch = oldPwd.equals(currentPwd) || encryptedOldPwd.equals(currentPwd);
+        if (!passwordMatch) {
+            return Result.fail("密码错误");
+        }
+
+        // 修改用户名
+        if (newUsername != null && !newUsername.isEmpty()) {
+            configService.saveSetting("admin_user", newUsername);
+        }
+
+        // 修改密码
+        if (newPwd != null && !newPwd.isEmpty()) {
+            if (newPwd.length() < 6) {
+                return Result.fail("新密码长度不能小于6位");
+            }
+            configService.saveSetting("admin_pwd", md5(newPwd + "!@#%!s!0"));
+        }
+
+        configService.refreshCache();
+        return Result.ok("账号信息修改成功");
     }
 
     private String md5(String input) {

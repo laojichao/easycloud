@@ -186,7 +186,7 @@ public class AdminKmController {
 
     /**
      * 批量操作
-     * action: enable, disable, delete, unbind, add_time, sub_time, export
+     * action: enable, disable, delete, unbind, add_time, sub_time, export, add_time_all, sub_time_all, unbind_all
      */
     @PostMapping("/batch")
     public Result<?> batch(@RequestBody Map<String, Object> body) {
@@ -194,6 +194,9 @@ public class AdminKmController {
         @SuppressWarnings("unchecked")
         List<Number> ids = (List<Number>) body.get("ids");
         long hours = body.containsKey("hours") ? ((Number) body.get("hours")).longValue() : 0;
+        // 时间单位: hour/day/week/month/season/year
+        String timeUnit = body.containsKey("timeUnit") ? (String) body.get("timeUnit") : "hour";
+        Long appId = body.containsKey("appid") ? Long.parseLong(body.get("appid").toString()) : null;
 
         if (action == null) {
             return Result.fail("参数不完整");
@@ -204,9 +207,17 @@ public class AdminKmController {
             return handleExport(body);
         }
 
+        // 按应用ID操作（add_time_all, sub_time_all, unbind_all）
+        if (action.endsWith("_all")) {
+            return handleAllAction(action, appId, hours, timeUnit);
+        }
+
         if (ids == null || ids.isEmpty()) {
             return Result.fail("参数不完整");
         }
+
+        // 将时间单位转换为小时
+        long hoursConverted = convertToHours(hours, timeUnit);
 
         for (Number idNum : ids) {
             Long id = idNum.longValue();
@@ -230,15 +241,62 @@ public class AdminKmController {
                     appKmMapper.unbindKm(id, now);
                     break;
                 case "add_time":
-                    adjustTime(km, hours);
+                    adjustTime(km, hoursConverted);
                     break;
                 case "sub_time":
-                    adjustTime(km, -hours);
+                    adjustTime(km, -hoursConverted);
                     break;
             }
         }
 
         return Result.ok("批量操作成功");
+    }
+
+    /**
+     * 按应用ID操作所有卡密（add_time_all, sub_time_all, unbind_all）
+     */
+    private Result<?> handleAllAction(String action, Long appId, long hours, String timeUnit) {
+        if (appId == null) {
+            return Result.fail("应用ID不能为空");
+        }
+
+        LambdaQueryWrapper<AppKm> wrapper = new LambdaQueryWrapper<AppKm>()
+                .eq(AppKm::getAppid, appId);
+        List<AppKm> kms = appKmMapper.selectList(wrapper);
+
+        long hoursConverted = convertToHours(hours, timeUnit);
+        long now = System.currentTimeMillis() / 1000;
+
+        for (AppKm km : kms) {
+            switch (action) {
+                case "add_time_all":
+                    adjustTime(km, hoursConverted);
+                    break;
+                case "sub_time_all":
+                    adjustTime(km, -hoursConverted);
+                    break;
+                case "unbind_all":
+                    appKmMapper.unbindKm(km.getId(), now);
+                    break;
+            }
+        }
+
+        return Result.ok("批量操作成功，共处理 " + kms.size() + " 条记录");
+    }
+
+    /**
+     * 将时间值按单位转换为小时
+     */
+    private long convertToHours(long value, String unit) {
+        if (unit == null) return value;
+        switch (unit) {
+            case "day": return value * 24;
+            case "week": return value * 24 * 7;
+            case "month": return value * 24 * 30;
+            case "season": return value * 24 * 90;
+            case "year": return value * 24 * 365;
+            default: return value; // hour
+        }
     }
 
     /**
