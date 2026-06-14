@@ -1,59 +1,82 @@
 <template>
   <div class="files-page">
-    <div class="page-header">
-      <h2>文件管理</h2>
-      <el-button type="primary" @click="showDialog()">添加文件</el-button>
+    <div class="page-header animate-in">
+      <div class="header-left">
+        <h2 class="page-title">
+          <span class="title-accent">&gt;_</span> 文件管理
+        </h2>
+        <span class="title-meta">共 {{ total }} 个文件</span>
+      </div>
+      <el-button type="primary" @click="showDialog()">
+        <el-icon><Plus /></el-icon>
+        添加文件
+      </el-button>
     </div>
 
-    <el-table :data="list" v-loading="loading" stripe>
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="appid" label="应用ID" width="80" />
-      <el-table-column prop="fileUrl" label="文件链接" show-overflow-tooltip />
-      <el-table-column prop="type" label="类型" width="100">
-        <template #default="{ row }">
-          <el-tag :type="row.type === 'lanzou' ? 'warning' : ''">
-            {{ row.type === 'lanzou' ? '蓝奏云' : '直链' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="note" label="备注" width="150" show-overflow-tooltip />
-      <el-table-column label="状态" width="80">
-        <template #default="{ row }">
-          <el-tag :type="row.state === 'y' ? 'success' : 'danger'" size="small">
-            {{ row.state === 'y' ? '启用' : '禁用' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="200" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" @click="showDialog(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="table-wrapper animate-in" style="animation-delay: 0.15s">
+      <el-table :data="list" v-loading="loading" stripe>
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="appid" label="应用" width="70" />
+        <el-table-column prop="fileUrl" label="文件链接" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="link-text">{{ row.fileUrl }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="类型" width="90">
+          <template #default="{ row }">
+            <span class="type-tag" :class="row.type === 'lanzou' ? 'type-lanzou' : 'type-direct'">
+              {{ row.type === 'lanzou' ? '蓝奏云' : '直链' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="note" label="备注" width="140" show-overflow-tooltip />
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <span class="status-badge" :class="row.state === 'y' ? 'status-on' : 'status-off'">
+              {{ row.state === 'y' ? '启用' : '禁用' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <div class="action-btns">
+              <button class="tbl-btn tbl-btn-ghost" @click="showDialog(row)">编辑</button>
+              <button class="tbl-btn tbl-btn-danger" @click="handleDelete(row)">删除</button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
 
-    <el-pagination v-if="total > 0" layout="total, prev, pager, next" :total="total"
-      :page-size="pageSize" v-model:current-page="currentPage" @current-change="loadData" />
+    <div class="pagination-bar animate-in" style="animation-delay: 0.3s" v-if="total > 0">
+      <el-pagination
+        layout="total, prev, pager, next"
+        :total="total"
+        :page-size="pageSize"
+        v-model:current-page="currentPage"
+        @current-change="loadData"
+      />
+    </div>
 
     <el-dialog v-model="dialogVisible" :title="editId ? '编辑文件' : '添加文件'" width="500px">
       <el-form :model="form" label-width="100px">
-        <el-form-item label="应用ID">
-          <el-input v-model.number="form.appid" />
+        <el-form-item label="应用 ID">
+          <el-input v-model.number="form.appid" placeholder="关联的应用 ID" />
         </el-form-item>
         <el-form-item label="文件链接">
-          <el-input v-model="form.fileUrl" />
+          <el-input v-model="form.fileUrl" placeholder="下载链接" />
         </el-form-item>
         <el-form-item label="链接类型">
-          <el-select v-model="form.type">
+          <el-select v-model="form.type" style="width: 100%">
             <el-option value="direct" label="直链" />
             <el-option value="lanzou" label="蓝奏云" />
           </el-select>
         </el-form-item>
         <el-form-item label="蓝奏云密码" v-if="form.type === 'lanzou'">
-          <el-input v-model="form.lanzouPass" />
+          <el-input v-model="form.lanzouPass" placeholder="分享密码（可选）" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="form.note" />
+          <el-input v-model="form.note" placeholder="文件说明" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -67,6 +90,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { getFileList, createFile, updateFile, deleteFile } from '@/api/admin'
 
 const list = ref([])
@@ -135,7 +159,7 @@ async function handleSave() {
 }
 
 async function handleDelete(row) {
-  await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm('确定删除？', '确认删除', { type: 'warning' })
   const res = await deleteFile(row.id)
   if (res.code === 200) {
     ElMessage.success('删除成功')
@@ -145,7 +169,134 @@ async function handleDelete(row) {
 </script>
 
 <style scoped lang="scss">
-.files-page { padding: 20px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.el-pagination { margin-top: 20px; justify-content: flex-end; }
+.files-page { max-width: 1200px; }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  .header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .page-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+
+    .title-accent {
+      font-family: var(--font-mono);
+      color: var(--neon-cyan);
+      font-size: 16px;
+      margin-right: 4px;
+    }
+  }
+
+  .title-meta {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+}
+
+.table-wrapper {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.link-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.type-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+
+  &.type-lanzou {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--neon-purple);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  &.type-direct {
+    background: rgba(0, 240, 255, 0.1);
+    color: var(--neon-cyan);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+  }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  &.status-on {
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--neon-green);
+    &::before { background: var(--neon-green); box-shadow: 0 0 6px rgba(0, 255, 136, 0.5); }
+  }
+
+  &.status-off {
+    background: rgba(255, 45, 120, 0.1);
+    color: var(--neon-magenta);
+    &::before { background: var(--neon-magenta); }
+  }
+}
+
+.action-btns { display: flex; gap: 6px; }
+
+.tbl-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+
+  &.tbl-btn-ghost {
+    color: var(--neon-cyan);
+    border-color: rgba(0, 240, 255, 0.2);
+    &:hover { background: rgba(0, 240, 255, 0.08); }
+  }
+
+  &.tbl-btn-danger {
+    color: var(--neon-magenta);
+    border-color: rgba(255, 45, 120, 0.2);
+    &:hover { background: rgba(255, 45, 120, 0.08); }
+  }
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
 </style>
