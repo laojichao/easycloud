@@ -22,7 +22,15 @@ import java.util.*;
 public class AdminKmController {
 
     private final AppKmMapper appKmMapper;
-    private static final String CHAR_POOL = "abcdefghijklmnopqrstuvwxyz0***REMOVED***";
+
+    /** 7种卡密结构的字符池 */
+    private static final String CHARS_ALL = "abcdefghijklmnopqrstuvwxyz0***REMOVED***ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String CHARS_LOWER_NUM = "abcdefghijklmnopqrstuvwxyz0***REMOVED***";
+    private static final String CHARS_UPPER_NUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0***REMOVED***";
+    private static final String CHARS_LOWER = "abcdefghijklmnopqrstuvwxyz";
+    private static final String CHARS_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String CHARS_NUM = "0***REMOVED***";
+    private static final String CHARS_MIXED_CASE = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /**
@@ -35,22 +43,40 @@ public class AdminKmController {
             @RequestParam(required = false) Long appid,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String state,
-            @RequestParam(required = false) String type) {
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String useStatus) {
 
         LambdaQueryWrapper<AppKm> wrapper = new LambdaQueryWrapper<>();
         if (appid != null) {
             wrapper.eq(AppKm::getAppid, appid);
         }
         if (StringUtils.hasText(keyword)) {
-            wrapper.like(AppKm::getKami, keyword)
+            wrapper.and(w -> w.like(AppKm::getKami, keyword)
                     .or().like(AppKm::getNote, keyword)
-                    .or().like(AppKm::getUser, keyword);
+                    .or().like(AppKm::getUser, keyword));
         }
         if (StringUtils.hasText(state)) {
             wrapper.eq(AppKm::getState, state);
         }
         if (StringUtils.hasText(type)) {
             wrapper.eq(AppKm::getType, type);
+        }
+        // 按使用状态筛选: unused(未使用), used(已使用), expired(已过期)
+        if (StringUtils.hasText(useStatus)) {
+            long now = System.currentTimeMillis() / 1000;
+            switch (useStatus) {
+                case "unused":
+                    wrapper.and(w -> w.isNull(AppKm::getUseTime).or().eq(AppKm::getUseTime, 0));
+                    break;
+                case "used":
+                    wrapper.isNotNull(AppKm::getUseTime).ne(AppKm::getUseTime, 0);
+                    break;
+                case "expired":
+                    wrapper.and(w -> w.isNotNull(AppKm::getUseTime).ne(AppKm::getUseTime, 0))
+                            .and(w -> w.lt(AppKm::getEndTime, String.valueOf(now))
+                                    .ne(AppKm::getEndTime, "4102243200"));
+                    break;
+            }
         }
         wrapper.orderByDesc(AppKm::getId);
 
@@ -70,10 +96,14 @@ public class AdminKmController {
         int length = Integer.parseInt(body.getOrDefault("length", "16").toString());
         String prefix = (String) body.getOrDefault("prefix", "");
         int amount = Integer.parseInt(body.getOrDefault("amount", "1").toString());
+        // 结构类型: 1=混合大小写+数字, 2=大写+数字, 3=小写+数字, 4=小写字母, 5=大写字母, 6=纯数字, 7=大小写字母
+        int structure = Integer.parseInt(body.getOrDefault("structure", "1").toString());
 
         if (count <= 0 || count > 10000) {
             return Result.fail("生成数量必须在1-10000之间");
         }
+
+        String charPool = getCharPool(structure);
 
         List<String> generatedKeys = new ArrayList<>();
         int maxRetries = 10;
@@ -81,7 +111,7 @@ public class AdminKmController {
             String kami = null;
             // 重试生成唯一卡密
             for (int retry = 0; retry < maxRetries; retry++) {
-                String candidate = prefix + generateRandomString(length - prefix.length());
+                String candidate = prefix + generateRandomString(length - prefix.length(), charPool);
                 Long existing = appKmMapper.selectCount(
                         new LambdaQueryWrapper<AppKm>()
                                 .eq(AppKm::getKami, candidate)
@@ -156,14 +186,25 @@ public class AdminKmController {
 
     /**
      * 批量操作
+     * action: enable, disable, delete, unbind, add_time, sub_time, export
      */
     @PostMapping("/batch")
     public Result<?> batch(@RequestBody Map<String, Object> body) {
         String action = (String) body.get("action");
         @SuppressWarnings("unchecked")
         List<Number> ids = (List<Number>) body.get("ids");
+        long hours = body.containsKey("hours") ? ((Number) body.get("hours")).longValue() : 0;
 
-        if (action == null || ids == null || ids.isEmpty()) {
+        if (action == null) {
+            return Result.fail("参数不完整");
+        }
+
+        // export 不需要 ids
+        if ("export".equals(action)) {
+            return handleExport(body);
+        }
+
+        if (ids == null || ids.isEmpty()) {
             return Result.fail("参数不完整");
         }
 
@@ -185,14 +226,57 @@ public class AdminKmController {
                     appKmMapper.deleteById(id);
                     break;
                 case "unbind":
-                    km.setUser("");
-                    km.setUserIp("");
-                    appKmMapper.updateById(km);
+                    long now = System.currentTimeMillis() / 1000;
+                    appKmMapper.unbindKm(id, now);
+                    break;
+                case "add_time":
+                    adjustTime(km, hours);
+                    break;
+                case "sub_time":
+                    adjustTime(km, -hours);
                     break;
             }
         }
 
         return Result.ok("批量操作成功");
+    }
+
+    /**
+     * 调整卡密时长
+     */
+    private void adjustTime(AppKm km, long hours) {
+        if (km.getEndTime() == null) return;
+        try {
+            long endTime = Long.parseLong(km.getEndTime());
+            long newEndTime = endTime + (hours * 3600);
+            if (newEndTime < 0) newEndTime = 0;
+            km.setEndTime(String.valueOf(newEndTime));
+            appKmMapper.updateById(km);
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
+    /**
+     * 导出卡密（对应 PHP appkm_change aid=4/5）
+     */
+    private Result<?> handleExport(Map<String, Object> body) {
+        Long appId = body.containsKey("appid") ? Long.parseLong(body.get("appid").toString()) : null;
+        @SuppressWarnings("unchecked")
+        List<Number> ids = (List<Number>) body.get("ids");
+
+        LambdaQueryWrapper<AppKm> wrapper = new LambdaQueryWrapper<>();
+        if (appId != null) {
+            wrapper.eq(AppKm::getAppid, appId);
+        }
+        if (ids != null && !ids.isEmpty()) {
+            wrapper.in(AppKm::getId, ids.stream().map(Number::longValue).toList());
+        }
+        wrapper.select(AppKm::getKami);
+        wrapper.orderByDesc(AppKm::getId);
+
+        List<AppKm> kms = appKmMapper.selectList(wrapper);
+        List<String> keys = kms.stream().map(AppKm::getKami).toList();
+        return Result.ok(keys);
     }
 
     /**
@@ -229,11 +313,27 @@ public class AdminKmController {
         return Result.ok("清理成功，共删除 " + count + " 条卡密");
     }
 
-    private String generateRandomString(int length) {
+    /**
+     * 根据结构类型获取字符池（对应 PHP RandomStr1-6 + 默认）
+     */
+    private String getCharPool(int structure) {
+        switch (structure) {
+            case 1: return CHARS_ALL;          // 混合大小写+数字
+            case 2: return CHARS_UPPER_NUM;    // 大写+数字
+            case 3: return CHARS_LOWER_NUM;    // 小写+数字
+            case 4: return CHARS_LOWER;        // 小写字母
+            case 5: return CHARS_UPPER;        // 大写字母
+            case 6: return CHARS_NUM;          // 纯数字
+            case 7: return CHARS_MIXED_CASE;   // 大小写字母
+            default: return CHARS_ALL;
+        }
+    }
+
+    private String generateRandomString(int length, String charPool) {
         if (length <= 0) length = 8;
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
-            sb.append(CHAR_POOL.charAt(RANDOM.nextInt(CHAR_POOL.length())));
+            sb.append(charPool.charAt(RANDOM.nextInt(charPool.length())));
         }
         return sb.toString();
     }

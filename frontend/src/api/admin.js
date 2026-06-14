@@ -42,6 +42,18 @@ export function batchApp(action, ids) {
   return request.post('/api/admin/app/batch', { action, ids })
 }
 
+export function updateAppSecurity(id, data) {
+  return request.put(`/api/admin/app/${id}/security`, data)
+}
+
+export function updateAppAuth(id, data) {
+  return request.put(`/api/admin/app/${id}/auth`, data)
+}
+
+export function updateAppInfo(id, data) {
+  return request.put(`/api/admin/app/${id}/info`, data)
+}
+
 // ========== 卡密管理 ==========
 export function getKmList(params) {
   return request.get('/api/admin/km/list', { params })
@@ -67,6 +79,10 @@ export function batchKm(action, ids) {
   return request.post('/api/admin/km/batch', { action, ids })
 }
 
+export function batchKmWithParams(data) {
+  return request.post('/api/admin/km/batch', data)
+}
+
 export function cleanKm(data) {
   return request.post('/api/admin/km/clean', data)
 }
@@ -86,6 +102,10 @@ export function updateFile(id, data) {
 
 export function deleteFile(id) {
   return request.delete(`/api/admin/file/${id}`)
+}
+
+export function toggleFile(id) {
+  return request.post(`/api/admin/file/${id}/toggle`)
 }
 
 export function batchFile(action, ids) {

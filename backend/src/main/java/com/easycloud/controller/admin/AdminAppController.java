@@ -4,8 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.easycloud.common.Result;
 import com.easycloud.entity.App;
+import com.easycloud.entity.AppFile;
+import com.easycloud.entity.AppKm;
+import com.easycloud.mapper.AppFileMapper;
+import com.easycloud.mapper.AppKmMapper;
 import com.easycloud.mapper.AppMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +26,8 @@ import java.util.*;
 public class AdminAppController {
 
     private final AppMapper appMapper;
+    private final AppKmMapper appKmMapper;
+    private final AppFileMapper appFileMapper;
 
     /**
      * 应用列表
@@ -79,10 +86,81 @@ public class AdminAppController {
     }
 
     /**
-     * 删除应用
+     * 更新安全配置（对应 PHP editApp_safe）
+     */
+    @PutMapping("/{id}/security")
+    public Result<?> updateSecurity(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        App app = appMapper.selectById(id);
+        if (app == null) return Result.fail("应用不存在");
+
+        if (body.containsKey("miState")) app.setMiState((String) body.get("miState"));
+        if (body.containsKey("miType")) app.setMiType(((Number) body.get("miType")).intValue());
+        if (body.containsKey("miSign")) app.setMiSign((String) body.get("miSign"));
+        if (body.containsKey("miSignIn")) app.setMiSignIn((String) body.get("miSignIn"));
+        if (body.containsKey("printSign")) app.setPrintSign((String) body.get("printSign"));
+        if (body.containsKey("rc4Key")) app.setRc4Key((String) body.get("rc4Key"));
+        if (body.containsKey("miTime")) app.setMiTime(((Number) body.get("miTime")).intValue());
+
+        appMapper.updateById(app);
+        return Result.ok("安全配置更新成功");
+    }
+
+    /**
+     * 更新卡密/认证配置（对应 PHP kmedit）
+     */
+    @PutMapping("/{id}/auth")
+    public Result<?> updateAuth(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        App app = appMapper.selectById(id);
+        if (app == null) return Result.fail("应用不存在");
+
+        if (body.containsKey("switch")) app.setSwitch_((String) body.get("switch"));
+        if (body.containsKey("ipauth")) app.setIpauth((String) body.get("ipauth"));
+        if (body.containsKey("logonCheckIn")) app.setLogonCheckIn((String) body.get("logonCheckIn"));
+        if (body.containsKey("kmUnmachine")) app.setKmUnmachine((String) body.get("kmUnmachine"));
+        if (body.containsKey("kmChange")) app.setKmChange(((Number) body.get("kmChange")).intValue());
+        if (body.containsKey("kmChangeNum")) app.setKmChangeNum(((Number) body.get("kmChangeNum")).intValue());
+        if (body.containsKey("kmChangeTime")) app.setKmChangeTime(((Number) body.get("kmChangeTime")).intValue());
+        if (body.containsKey("longuseKmChange")) app.setLonguseKmChange(((Number) body.get("longuseKmChange")).intValue());
+        if (body.containsKey("singleKmChangeNum")) app.setSingleKmChangeNum(((Number) body.get("singleKmChangeNum")).intValue());
+
+        appMapper.updateById(app);
+        return Result.ok("认证配置更新成功");
+    }
+
+    /**
+     * 更新应用信息（对应 PHP appedit / editApp_update）
+     */
+    @PutMapping("/{id}/info")
+    public Result<?> updateInfo(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        App app = appMapper.selectById(id);
+        if (app == null) return Result.fail("应用不存在");
+
+        if (body.containsKey("name")) app.setName((String) body.get("name"));
+        if (body.containsKey("img")) app.setImg((String) body.get("img"));
+        if (body.containsKey("note")) app.setNote((String) body.get("note"));
+        if (body.containsKey("appGg")) app.setAppGg((String) body.get("appGg"));
+        if (body.containsKey("version")) app.setVersion((String) body.get("version"));
+        if (body.containsKey("versionInfo")) app.setVersionInfo((String) body.get("versionInfo"));
+        if (body.containsKey("active")) app.setActive((String) body.get("active"));
+        if (body.containsKey("appUpdateUrl")) app.setAppUpdateUrl((String) body.get("appUpdateUrl"));
+        if (body.containsKey("appUpdateShow")) app.setAppUpdateShow((String) body.get("appUpdateShow"));
+        if (body.containsKey("appUpdateMust")) app.setAppUpdateMust((String) body.get("appUpdateMust"));
+        if (body.containsKey("appUpdateUrlType")) app.setAppUpdateUrlType((String) body.get("appUpdateUrlType"));
+        if (body.containsKey("lanzouPass")) app.setLanzouPass((String) body.get("lanzouPass"));
+
+        appMapper.updateById(app);
+        return Result.ok("应用信息更新成功");
+    }
+
+    /**
+     * 删除应用（级联删除关联的卡密和文件）
      */
     @DeleteMapping("/{id}")
+    @Transactional
     public Result<?> delete(@PathVariable Long id) {
+        // PHP appdel: 级联删除 yixi_appkm, yixi_appfile
+        appKmMapper.delete(new LambdaQueryWrapper<AppKm>().eq(AppKm::getAppid, id));
+        appFileMapper.delete(new LambdaQueryWrapper<AppFile>().eq(AppFile::getAppid, id));
         appMapper.deleteById(id);
         return Result.ok("删除成功");
     }

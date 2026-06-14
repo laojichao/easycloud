@@ -152,7 +152,9 @@ public class ApiCrypto {
     public static String aesEncrypt(String data, String rc4Key) {
         try {
             // 构造 AES Key: 'y' + rc4_key前13字符 + 'gg' = 16字节
-            String keyStr = "y" + rc4Key.substring(0, 13) + "gg";
+            // PHP: 'y'.substr($mi['rc4_key'],0,13).'gg' -- substr 超出长度时返回全部
+            String rc4Part = rc4Key.length() >= 13 ? rc4Key.substring(0, 13) : rc4Key;
+            String keyStr = "y" + rc4Part + "gg";
             byte[] keyBytes = keyStr.getBytes(StandardCharsets.US_ASCII);
 
             // IV: "0102030405060708" 是16个ASCII字符 = 16字节
@@ -180,7 +182,8 @@ public class ApiCrypto {
      */
     public static String aesDecrypt(String hexData, String rc4Key) {
         try {
-            String keyStr = "y" + rc4Key.substring(0, 13) + "gg";
+            String rc4Part = rc4Key.length() >= 13 ? rc4Key.substring(0, 13) : rc4Key;
+            String keyStr = "y" + rc4Part + "gg";
             byte[] keyBytes = keyStr.getBytes(StandardCharsets.US_ASCII);
 
             byte[] ivBytes = "0102030405060708".getBytes(StandardCharsets.US_ASCII);

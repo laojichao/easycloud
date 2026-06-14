@@ -27,6 +27,12 @@
           <option value="code">时长卡</option>
           <option value="single">次数卡</option>
         </select>
+        <select v-model="filter.useStatus" class="filter-select">
+          <option value="">全部状态</option>
+          <option value="unused">未使用</option>
+          <option value="used">已使用</option>
+          <option value="expired">已过期</option>
+        </select>
         <button class="filter-btn" @click="loadData">
           <el-icon><Search /></el-icon>
           搜索
@@ -132,6 +138,17 @@
         <el-form-item label="前缀">
           <el-input v-model="genForm.prefix" placeholder="可选前缀" />
         </el-form-item>
+        <el-form-item label="字符结构">
+          <el-select v-model="genForm.structure" style="width: 100%">
+            <el-option :value="1" label="混合大小写+数字" />
+            <el-option :value="2" label="大写字母+数字" />
+            <el-option :value="3" label="小写字母+数字" />
+            <el-option :value="4" label="小写字母" />
+            <el-option :value="5" label="大写字母" />
+            <el-option :value="6" label="纯数字" />
+            <el-option :value="7" label="大小写字母" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="genDialogVisible = false">取消</el-button>
@@ -155,7 +172,7 @@ const loading = ref(false)
 const genDialogVisible = ref(false)
 const generating = ref(false)
 
-const filter = reactive({ appid: '', state: '', type: '' })
+const filter = reactive({ appid: '', state: '', type: '', useStatus: '' })
 
 const genForm = reactive({
   appid: '',
@@ -164,7 +181,8 @@ const genForm = reactive({
   amount: 1,
   count: 10,
   length: 16,
-  prefix: ''
+  prefix: '',
+  structure: 1
 })
 
 onMounted(() => loadData())
@@ -176,6 +194,7 @@ async function loadData() {
     if (filter.appid) params.appid = filter.appid
     if (filter.state) params.state = filter.state
     if (filter.type) params.type = filter.type
+    if (filter.useStatus) params.useStatus = filter.useStatus
     const res = await getKmList(params)
     if (res.code === 200) {
       list.value = res.data?.records || []
@@ -215,6 +234,8 @@ async function handleToggle(row) {
   if (res.code === 200) {
     ElMessage.success('操作成功')
     loadData()
+  } else {
+    ElMessage.error(res.msg || '操作失败')
   }
 }
 
@@ -224,6 +245,8 @@ async function handleUnbind(row) {
   if (res.code === 200) {
     ElMessage.success('解绑成功')
     loadData()
+  } else {
+    ElMessage.error(res.msg || '解绑失败')
   }
 }
 

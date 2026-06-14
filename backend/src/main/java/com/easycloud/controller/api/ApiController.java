@@ -93,6 +93,11 @@ public class ApiController {
                 // 明文模式
                 dataArr = collectParams(request);
 
+                // PHP: if(!$value) $value = $data_arr['value'];
+                if (value == null || value.isEmpty()) {
+                    value = dataArr.get("value");
+                }
+
                 // 签名验证
                 if ("y".equals(app.getMiSign())) {
                     if (sign == null || sign.isEmpty()) {
@@ -257,8 +262,8 @@ public class ApiController {
             result.put("msg", msg);
             long now = Instant.now().getEpochSecond();
             result.put("time", now);
-            if (app != null && value != null) {
-                result.put("check", ApiSignature.responseCheck(now, app.getAppkey(), value));
+            if (app != null) {
+                result.put("check", ApiSignature.responseCheck(now, app.getAppkey(), value != null ? value : ""));
             }
             return objectMapper.writeValueAsString(result);
         } catch (Exception e) {
@@ -275,8 +280,8 @@ public class ApiController {
         result.put("msg", msg);
         long now = Instant.now().getEpochSecond();
         result.put("time", now);
-        if (app != null && value != null) {
-            result.put("check", ApiSignature.responseCheck(now, app.getAppkey(), value));
+        if (app != null) {
+            result.put("check", ApiSignature.responseCheck(now, app.getAppkey(), value != null ? value : ""));
         }
         return result;
     }
