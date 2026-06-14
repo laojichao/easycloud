@@ -53,6 +53,22 @@ public class AdminFileController {
      */
     @PostMapping
     public Result<?> create(@RequestBody AppFile file) {
+        // PHP addappfile: URL 格式验证
+        if (file.getFileUrl() == null || file.getFileUrl().isEmpty()) {
+            return Result.fail("文件链接不能为空");
+        }
+        if (!file.getFileUrl().matches("^https?://.+")) {
+            return Result.fail("文件链接格式不正确，需以 http:// 或 https:// 开头");
+        }
+
+        // PHP addappfile: 检查链接是否重复
+        Long existing = appFileMapper.selectCount(
+                new LambdaQueryWrapper<AppFile>()
+                        .eq(AppFile::getFileUrl, file.getFileUrl()));
+        if (existing > 0) {
+            return Result.fail("该文件链接已存在");
+        }
+
         file.setAddtime(LocalDateTime.now());
         if (file.getState() == null) {
             file.setState("y");

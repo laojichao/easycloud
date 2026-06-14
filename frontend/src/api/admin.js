@@ -42,6 +42,14 @@ export function batchApp(action, ids) {
   return request.post('/api/admin/app/batch', { action, ids })
 }
 
+export function uploadAppImage(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/api/admin/app/upload-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
 export function updateAppSecurity(id, data) {
   return request.put(`/api/admin/app/${id}/security`, data)
 }
@@ -113,6 +121,10 @@ export function batchFile(action, ids) {
 }
 
 // ========== 系统设置 ==========
+export function getStats() {
+  return request.get('/api/admin/stats')
+}
+
 export function getSettings() {
   return request.get('/api/admin/setting')
 }
@@ -127,4 +139,8 @@ export function refreshCache() {
 
 export function changePassword(data) {
   return request.post('/api/admin/setting/change-password', data)
+}
+
+export function changeAccount(data) {
+  return request.post('/api/admin/setting/change-account', data)
 }

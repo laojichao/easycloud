@@ -88,14 +88,18 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getAppList, getKmList, getFileList } from '@/api/admin'
+import { getStats } from '@/api/admin'
 import { Grid, Key, Folder, Setting, DataAnalysis } from '@element-plus/icons-vue'
 
 const stats = ref({
   appCount: 0,
   kmCount: 0,
   fileCount: 0,
-  todayCalls: 0
+  todayApps: 0,
+  todayKm: 0,
+  todayLogs: 0,
+  kmUsed: 0,
+  kmUnused: 0
 })
 
 const statsCards = computed(() => [
@@ -124,8 +128,16 @@ const statsCards = computed(() => [
     glowColor: 'rgba(139, 92, 246, 0.05)'
   },
   {
-    label: '今日调用',
-    value: stats.value.todayCalls,
+    label: '文件总数',
+    value: stats.value.fileCount,
+    icon: 'Folder',
+    iconBg: 'rgba(139, 92, 246, 0.1)',
+    iconColor: '#8b5cf6',
+    glowColor: 'rgba(139, 92, 246, 0.05)'
+  },
+  {
+    label: '今日日志',
+    value: stats.value.todayLogs,
     icon: 'DataAnalysis',
     iconBg: 'rgba(0, 255, 136, 0.1)',
     iconColor: '#00ff88',
@@ -135,14 +147,10 @@ const statsCards = computed(() => [
 
 onMounted(async () => {
   try {
-    const [apps, kms, files] = await Promise.all([
-      getAppList({ page: 1, size: 1 }),
-      getKmList({ page: 1, size: 1 }),
-      getFileList({ page: 1, size: 1 })
-    ])
-    stats.value.appCount = apps.data?.total || 0
-    stats.value.kmCount = kms.data?.total || 0
-    stats.value.fileCount = files.data?.total || 0
+    const res = await getStats()
+    if (res.code === 200 && res.data) {
+      Object.assign(stats.value, res.data)
+    }
   } catch (e) {
     console.error('加载统计数据失败', e)
   }
