@@ -72,6 +72,20 @@ public class AdminFileController {
     }
 
     /**
+     * 切换单个文件状态（对应 PHP app_fileactive）
+     */
+    @PostMapping("/{id}/toggle")
+    public Result<?> toggle(@PathVariable Long id) {
+        AppFile file = appFileMapper.selectById(id);
+        if (file == null) {
+            return Result.fail("文件不存在");
+        }
+        file.setState("y".equals(file.getState()) ? "n" : "y");
+        appFileMapper.updateById(file);
+        return Result.ok("操作成功");
+    }
+
+    /**
      * 删除文件
      */
     @DeleteMapping("/{id}")

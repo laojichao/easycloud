@@ -37,10 +37,17 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <div class="action-btns">
               <button class="tbl-btn tbl-btn-ghost" @click="showDialog(row)">编辑</button>
+              <button
+                class="tbl-btn"
+                :class="row.state === 'y' ? 'tbl-btn-warn' : 'tbl-btn-ok'"
+                @click="handleToggle(row)"
+              >
+                {{ row.state === 'y' ? '禁用' : '启用' }}
+              </button>
               <button class="tbl-btn tbl-btn-danger" @click="handleDelete(row)">删除</button>
             </div>
           </template>
@@ -91,7 +98,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getFileList, createFile, updateFile, deleteFile } from '@/api/admin'
+import { getFileList, createFile, updateFile, deleteFile, toggleFile } from '@/api/admin'
 
 const list = ref([])
 const total = ref(0)
@@ -152,9 +159,21 @@ async function handleSave() {
       ElMessage.success('保存成功')
       dialogVisible.value = false
       loadData()
+    } else {
+      ElMessage.error(res.msg || '保存失败')
     }
   } finally {
     saving.value = false
+  }
+}
+
+async function handleToggle(row) {
+  const res = await toggleFile(row.id)
+  if (res.code === 200) {
+    ElMessage.success('操作成功')
+    loadData()
+  } else {
+    ElMessage.error(res.msg || '操作失败')
   }
 }
 
@@ -164,6 +183,8 @@ async function handleDelete(row) {
   if (res.code === 200) {
     ElMessage.success('删除成功')
     loadData()
+  } else {
+    ElMessage.error(res.msg || '删除失败')
   }
 }
 </script>
@@ -291,6 +312,18 @@ async function handleDelete(row) {
     color: var(--neon-magenta);
     border-color: rgba(255, 45, 120, 0.2);
     &:hover { background: rgba(255, 45, 120, 0.08); }
+  }
+
+  &.tbl-btn-ok {
+    color: var(--neon-green);
+    border-color: rgba(0, 255, 136, 0.2);
+    &:hover { background: rgba(0, 255, 136, 0.08); }
+  }
+
+  &.tbl-btn-warn {
+    color: var(--neon-amber);
+    border-color: rgba(255, 170, 0, 0.2);
+    &:hover { background: rgba(255, 170, 0, 0.08); }
   }
 }
 

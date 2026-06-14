@@ -58,6 +58,8 @@ public class AdminSettingController {
             }
             configService.saveSetting(entry.getKey(), entry.getValue());
         }
+        // PHP: ajax.php set 操作在保存后清除缓存
+        configService.refreshCache();
         return Result.ok("保存成功");
     }
 

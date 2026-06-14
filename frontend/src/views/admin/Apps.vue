@@ -193,6 +193,8 @@ async function handleToggle(row, field, value) {
   if (res.code === 200) {
     ElMessage.success('操作成功')
     loadData()
+  } else {
+    ElMessage.error(res.msg || '操作失败')
   }
 }
 

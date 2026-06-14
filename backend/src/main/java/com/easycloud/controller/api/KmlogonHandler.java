@@ -121,9 +121,12 @@ public class KmlogonHandler {
             if ("longuse".equals(kmTime)) {
                 endTime = LONG_USE_SENTINEL;
             } else if (secondsPerUnit != null) {
-                endTime = String.valueOf(now + secondsPerUnit * (km.getAmount() != null ? km.getAmount() : 1));
+                // PHP: $vip = time() + $km_code * $res_kami['amount']; null amount → 0
+                int amount = km.getAmount() != null ? km.getAmount() : 0;
+                endTime = String.valueOf(now + secondsPerUnit * amount);
             } else {
-                endTime = String.valueOf(now + 86400L);
+                // PHP: $km_code 未定义时为 0, $vip = time() + 0 = time()
+                endTime = String.valueOf(now);
             }
 
             boolean success = appKmMapper.updateKmLogin(km.getId(), now, markcode, endTime, clientIp, "y") > 0;
@@ -167,7 +170,8 @@ public class KmlogonHandler {
     private Map<String, Object> handleSingleType(App app, AppKm km, String kami, String markcode, String clientIp, long now) {
         int amount = km.getAmount() != null ? km.getAmount() : 0;
 
-        if (amount <= 0) {
+        // PHP: if($res_kami['amount'] <= 0)out(201,...) -- 拒绝负数，但 amount=0 允许再登录一次
+        if (amount < 0) {
             return ApiController.buildErrorResponse(201, "卡密已到期", app, null);
         }
 
