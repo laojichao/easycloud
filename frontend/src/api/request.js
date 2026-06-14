@@ -24,7 +24,16 @@ request.interceptors.request.use(
 // 响应拦截器：处理 401 跳转登录
 request.interceptors.response.use(
   (response) => {
-    return response.data
+    const data = response.data
+    // 后端拦截器返回 HTTP 200 但 body 中 code=401
+    if (data && data.code === 401) {
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_username')
+      router.push('/admin/login')
+      ElMessage.error('登录已过期，请重新登录')
+      return Promise.reject(new Error('未授权'))
+    }
+    return data
   },
   (error) => {
     if (error.response) {

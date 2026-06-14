@@ -76,8 +76,24 @@ public class AdminKmController {
         }
 
         List<String> generatedKeys = new ArrayList<>();
+        int maxRetries = 10;
         for (int i = 0; i < count; i++) {
-            String kami = prefix + generateRandomString(length - prefix.length());
+            String kami = null;
+            // 重试生成唯一卡密
+            for (int retry = 0; retry < maxRetries; retry++) {
+                String candidate = prefix + generateRandomString(length - prefix.length());
+                Long existing = appKmMapper.selectCount(
+                        new LambdaQueryWrapper<AppKm>()
+                                .eq(AppKm::getKami, candidate)
+                                .eq(AppKm::getAppid, appId));
+                if (existing == 0) {
+                    kami = candidate;
+                    break;
+                }
+            }
+            if (kami == null) {
+                return Result.fail("生成卡密失败：无法生成唯一卡密，请调整长度或前缀");
+            }
 
             AppKm km = new AppKm();
             km.setAppid(appId);

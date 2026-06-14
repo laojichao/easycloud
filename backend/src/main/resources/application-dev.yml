@@ -9,6 +9,10 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
 
 # Override MySQL-specific settings for H2 compatibility
 mybatis-plus:
