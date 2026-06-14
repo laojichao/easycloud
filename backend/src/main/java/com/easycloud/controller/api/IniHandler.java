@@ -1,5 +1,6 @@
 package com.easycloud.controller.api;
 
+import com.easycloud.common.LanzouResolver;
 import com.easycloud.entity.App;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,10 +17,8 @@ public class IniHandler {
 
     /**
      * 处理请求 - 返回格式兼容 PHP out(200, $ini_data, $app_res)
-     * PHP 格式: {"code":200, "msg":{数据}, "time":xxx, "check":"xxx"}
      */
     public Map<String, Object> handle(App app, Map<String, String> dataArr) {
-        // 构建数据
         Map<String, Object> iniData = new LinkedHashMap<>();
         iniData.put("version", app.getVersion());
         iniData.put("version_info", app.getVersionInfo());
@@ -28,7 +27,6 @@ public class IniHandler {
         iniData.put("app_update_must", app.getAppUpdateMust());
         iniData.put("api_total", app.getTotal());
 
-        // PHP: out(200, $ini_data, $app_res) -> msg 字段放数据
         return ApiController.buildSuccessResponse(iniData, app, null);
     }
 
@@ -42,20 +40,8 @@ public class IniHandler {
         }
 
         if ("lanzou".equals(app.getAppUpdateUrlType())) {
-            return resolveLanzouUrl(url, app.getLanzouPass());
+            return LanzouResolver.resolve(url, app.getLanzouPass());
         }
         return url;
-    }
-
-    /**
-     * 解析蓝奏云链接 - 简化版
-     */
-    private String resolveLanzouUrl(String url, String pwd) {
-        try {
-            return url;
-        } catch (Exception e) {
-            log.warn("解析蓝奏云链接失败: {}", url, e);
-            return url;
-        }
     }
 }

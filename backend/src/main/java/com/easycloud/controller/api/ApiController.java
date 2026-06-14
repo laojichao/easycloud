@@ -2,6 +2,8 @@ package com.easycloud.controller.api;
 
 import com.easycloud.common.ApiCrypto;
 import com.easycloud.common.ApiSignature;
+import com.easycloud.common.ErrorCode;
+import com.easycloud.common.InputSanitizer;
 import com.easycloud.entity.App;
 import com.easycloud.mapper.AppMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -216,14 +218,15 @@ public class ApiController {
     }
 
     /**
-     * 收集请求参数（兼容 GET 和 POST）
+     * 收集请求参数（兼容 GET 和 POST）- 对应 PHP purge() 净化
      */
     private Map<String, String> collectParams(HttpServletRequest request) {
         Map<String, String> params = new LinkedHashMap<>();
         Map<String, String[]> paramMap = request.getParameterMap();
         for (Map.Entry<String, String[]> entry : paramMap.entrySet()) {
             if (entry.getValue() != null && entry.getValue().length > 0) {
-                params.put(entry.getKey(), entry.getValue()[0]);
+                // PHP: purge() 去除内部空格、XSS、SQL关键字
+                params.put(entry.getKey(), InputSanitizer.purge(entry.getValue()[0], true, true));
             }
         }
         return params;
@@ -250,9 +253,14 @@ public class ApiController {
     }
 
     /**
+     * 根据错误码自动查找消息 - 对应 PHP out($code) 自动从 msg.php 查找
+     */
+    private String buildJsonResponse(int code, App app, String value) {
+        return buildJsonResponse(code, ErrorCode.getMessage(code), app, null, value);
+    }
+
+    /**
      * 构建 JSON 响应字符串 - 兼容 PHP out() 函数
-     * PHP 格式: {"code":xxx, "msg":xxx, "time":xxx, "check":"xxx"}
-     * 注意: PHP 的 msg 字段放的是数据（当传入数组时）
      */
     private String buildJsonResponse(int code, Object msg, App app, Object data, String value) {
         try {
