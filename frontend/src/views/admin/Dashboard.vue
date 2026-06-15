@@ -131,6 +131,14 @@ const statsCards = computed(() => [
     glowColor: 'rgba(0, 240, 255, 0.05)'
   },
   {
+    label: '今日新增应用',
+    value: stats.value.todayApps || 0,
+    icon: 'Grid',
+    iconBg: 'rgba(0, 240, 255, 0.08)',
+    iconColor: '#00f0ff',
+    glowColor: 'rgba(0, 240, 255, 0.03)'
+  },
+  {
     label: '卡密总数',
     value: stats.value.kmCount,
     icon: 'Key',

@@ -7,14 +7,29 @@
         </h2>
         <span class="title-meta">共 {{ total }} 个文件</span>
       </div>
-      <el-button type="primary" @click="showDialog()">
-        <el-icon><Plus /></el-icon>
-        添加文件
-      </el-button>
+      <div class="header-actions">
+        <el-input v-model="keyword" placeholder="搜索文件备注/链接" clearable style="width: 200px"
+          @keyup.enter="loadData" @clear="loadData">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+        <el-button type="primary" @click="showDialog()">
+          <el-icon><Plus /></el-icon>添加文件
+        </el-button>
+      </div>
+    </div>
+
+    <!-- Batch operations bar -->
+    <div class="batch-bar animate-in" v-if="selectedIds.length > 0" style="animation-delay: 0.1s">
+      <span class="batch-info">已选 {{ selectedIds.length }} 项</span>
+      <el-button size="small" type="success" @click="handleBatch('enable')">批量启用</el-button>
+      <el-button size="small" type="warning" @click="handleBatch('disable')">批量禁用</el-button>
+      <el-button size="small" type="danger" @click="handleBatch('delete')">批量删除</el-button>
+      <el-button size="small" @click="selectedIds = []">取消选择</el-button>
     </div>
 
     <div class="table-wrapper animate-in" style="animation-delay: 0.15s">
-      <el-table :data="list" v-loading="loading" stripe>
+      <el-table :data="list" v-loading="loading" stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="45" />
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="appid" label="应用" width="70" />
         <el-table-column prop="fileUrl" label="文件链接" min-width="200" show-overflow-tooltip>
@@ -41,11 +56,7 @@
           <template #default="{ row }">
             <div class="action-btns">
               <button class="tbl-btn tbl-btn-ghost" @click="showDialog(row)">编辑</button>
-              <button
-                class="tbl-btn"
-                :class="row.state === 'y' ? 'tbl-btn-warn' : 'tbl-btn-ok'"
-                @click="handleToggle(row)"
-              >
+              <button class="tbl-btn" :class="row.state === 'y' ? 'tbl-btn-warn' : 'tbl-btn-ok'" @click="handleToggle(row)">
                 {{ row.state === 'y' ? '禁用' : '启用' }}
               </button>
               <button class="tbl-btn tbl-btn-danger" @click="handleDelete(row)">删除</button>
@@ -56,13 +67,8 @@
     </div>
 
     <div class="pagination-bar animate-in" style="animation-delay: 0.3s" v-if="total > 0">
-      <el-pagination
-        layout="total, prev, pager, next"
-        :total="total"
-        :page-size="pageSize"
-        v-model:current-page="currentPage"
-        @current-change="loadData"
-      />
+      <el-pagination layout="total, prev, pager, next" :total="total" :page-size="pageSize"
+        v-model:current-page="currentPage" @current-change="loadData" />
     </div>
 
     <el-dialog v-model="dialogVisible" :title="editId ? '编辑文件' : '添加文件'" width="500px">
@@ -95,79 +101,32 @@
 </template>
 
 <script setup>
-/**
- * 文件管理页面
- *
- * 功能：
- * - 展示文件列表（分页，显示应用ID/文件链接/类型/备注/状态/操作）
- * - 添加/编辑文件（对话框表单：应用ID、文件链接、链接类型、蓝奏云密码、备注）
- * - 切换文件启用/禁用状态
- * - 删除文件（二次确认）
- *
- * 蓝奏云链接处理：
- * - 支持两种链接类型：direct（直链）和 lanzou（蓝奏云）
- * - 蓝奏云类型可设置分享密码（lanzouPass），客户端获取文件时需要密码
- *
- * 对应后端端点：/api/admin/file/**
- */
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import { getFileList, createFile, updateFile, deleteFile, toggleFile } from '@/api/admin'
+import { Plus, Search } from '@element-plus/icons-vue'
+import { getFileList, createFile, updateFile, deleteFile, toggleFile, batchFile } from '@/api/admin'
 
-/** 文件列表数据 */
 const list = ref([])
-
-/** 列表总条数 */
 const total = ref(0)
-
-/** 当前页码 */
 const currentPage = ref(1)
-
-/** 每页条数 */
 const pageSize = ref(20)
-
-/** 列表加载状态 */
 const loading = ref(false)
-
-/** 新建/编辑对话框是否可见 */
 const dialogVisible = ref(false)
-
-/** 保存按钮加载状态 */
 const saving = ref(false)
-
-/**
- * 当前编辑的文件 ID
- * null 表示新建模式，非 null 表示编辑模式
- */
 const editId = ref(null)
+const keyword = ref('')
+const selectedIds = ref([])
 
-/**
- * 文件表单数据
- * @property {string|number} appid - 关联的应用 ID
- * @property {string} fileUrl - 文件下载链接
- * @property {string} type - 链接类型（direct直链/lanzou蓝奏云）
- * @property {string} lanzouPass - 蓝奏云分享密码（仅 lanzou 类型时使用）
- * @property {string} note - 文件备注说明
- */
-const form = reactive({
-  appid: '',
-  fileUrl: '',
-  type: 'direct',
-  lanzouPass: '',
-  note: ''
-})
+const form = reactive({ appid: '', fileUrl: '', type: 'direct', lanzouPass: '', note: '' })
 
-/** 页面挂载时加载文件列表 */
 onMounted(() => loadData())
 
-/**
- * 加载文件列表数据
- */
 async function loadData() {
   loading.value = true
   try {
-    const res = await getFileList({ page: currentPage.value, size: pageSize.value })
+    const params = { page: currentPage.value, size: pageSize.value }
+    if (keyword.value) params.keyword = keyword.value
+    const res = await getFileList(params)
     if (res.code === 200) {
       list.value = res.data?.records || []
       total.value = res.data?.total || 0
@@ -177,39 +136,28 @@ async function loadData() {
   }
 }
 
-/**
- * 显示新建/编辑对话框
- * @param {Object|null} row - 传入行数据为编辑模式，传入 null 为新建模式
- */
+function handleSelectionChange(rows) {
+  selectedIds.value = rows.map(r => r.id)
+}
+
 function showDialog(row) {
   if (row) {
-    // 编辑模式：用行数据填充表单
     editId.value = row.id
     Object.assign(form, {
-      appid: row.appid,
-      fileUrl: row.fileUrl || '',
-      type: row.type || 'direct',
-      lanzouPass: row.lanzouPass || '',
-      note: row.note || ''
+      appid: row.appid, fileUrl: row.fileUrl || '',
+      type: row.type || 'direct', lanzouPass: row.lanzouPass || '', note: row.note || ''
     })
   } else {
-    // 新建模式：清空表单
     editId.value = null
     Object.assign(form, { appid: '', fileUrl: '', type: 'direct', lanzouPass: '', note: '' })
   }
   dialogVisible.value = true
 }
 
-/**
- * 保存文件（新建或更新）
- * 根据 editId 判断调用 createFile 或 updateFile
- */
 async function handleSave() {
   saving.value = true
   try {
-    const res = editId.value
-      ? await updateFile(editId.value, form)
-      : await createFile(form)
+    const res = editId.value ? await updateFile(editId.value, form) : await createFile(form)
     if (res.code === 200) {
       ElMessage.success('保存成功')
       dialogVisible.value = false
@@ -222,32 +170,31 @@ async function handleSave() {
   }
 }
 
-/**
- * 切换文件启用/禁用状态
- * @param {Object} row - 文件行数据
- */
 async function handleToggle(row) {
   const res = await toggleFile(row.id)
-  if (res.code === 200) {
-    ElMessage.success('操作成功')
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '操作失败')
-  }
+  if (res.code === 200) { ElMessage.success('操作成功'); loadData() }
+  else ElMessage.error(res.msg || '操作失败')
 }
 
-/**
- * 删除文件（带二次确认）
- * @param {Object} row - 文件行数据
- */
 async function handleDelete(row) {
   await ElMessageBox.confirm('确定删除？', '确认删除', { type: 'warning' })
   const res = await deleteFile(row.id)
+  if (res.code === 200) { ElMessage.success('删除成功'); loadData() }
+  else ElMessage.error(res.msg || '删除失败')
+}
+
+async function handleBatch(action) {
+  const labels = { enable: '启用', disable: '禁用', delete: '删除' }
+  if (action === 'delete') {
+    await ElMessageBox.confirm(`确定批量删除 ${selectedIds.value.length} 个文件？`, '确认', { type: 'warning' })
+  }
+  const res = await batchFile(action, selectedIds.value)
   if (res.code === 200) {
-    ElMessage.success('删除成功')
+    ElMessage.success(`批量${labels[action]}成功`)
+    selectedIds.value = []
     loadData()
   } else {
-    ElMessage.error(res.msg || '删除失败')
+    ElMessage.error(res.msg || '操作失败')
   }
 }
 </script>
@@ -256,97 +203,40 @@ async function handleDelete(row) {
 .files-page { max-width: 1200px; }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-
-  .header-left {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+  .header-left { display: flex; align-items: baseline; gap: 12px; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .page-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-primary);
+    .title-accent { font-family: var(--font-mono); color: var(--neon-cyan); font-size: 16px; margin-right: 4px; }
   }
-
-  .page-title {
-    font-family: var(--font-display);
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-primary);
-
-    .title-accent {
-      font-family: var(--font-mono);
-      color: var(--neon-cyan);
-      font-size: 16px;
-      margin-right: 4px;
-    }
-  }
-
-  .title-meta {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text-dim);
-  }
+  .title-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
 }
 
-.table-wrapper {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+.batch-bar {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  padding: 10px 16px; background: rgba(0, 240, 255, 0.05); border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  .batch-info { font-family: var(--font-mono); font-size: 12px; color: var(--neon-cyan); }
 }
 
-.link-text {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-secondary);
-}
+.table-wrapper { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; }
+
+.link-text { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
 
 .type-tag {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 4px;
-
-  &.type-lanzou {
-    background: rgba(139, 92, 246, 0.1);
-    color: var(--neon-purple);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-  }
-
-  &.type-direct {
-    background: rgba(0, 240, 255, 0.1);
-    color: var(--neon-cyan);
-    border: 1px solid rgba(0, 240, 255, 0.2);
-  }
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px;
+  &.type-lanzou { background: rgba(139, 92, 246, 0.1); color: var(--neon-purple); border: 1px solid rgba(139, 92, 246, 0.2); }
+  &.type-direct { background: rgba(0, 240, 255, 0.1); color: var(--neon-cyan); border: 1px solid rgba(0, 240, 255, 0.2); }
 }
 
 .status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 10px;
-  border-radius: 20px;
-
-  &::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-  }
-
-  &.status-on {
-    background: rgba(0, 255, 136, 0.1);
-    color: var(--neon-green);
+  display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono);
+  font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px;
+  &::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+  &.status-on { background: rgba(0, 255, 136, 0.1); color: var(--neon-green);
     &::before { background: var(--neon-green); box-shadow: 0 0 6px rgba(0, 255, 136, 0.5); }
   }
-
-  &.status-off {
-    background: rgba(255, 45, 120, 0.1);
-    color: var(--neon-magenta);
+  &.status-off { background: rgba(255, 45, 120, 0.1); color: var(--neon-magenta);
     &::before { background: var(--neon-magenta); }
   }
 }
@@ -354,45 +244,22 @@ async function handleDelete(row) {
 .action-btns { display: flex; gap: 6px; }
 
 .tbl-btn {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: var(--text-secondary);
-
-  &.tbl-btn-ghost {
-    color: var(--neon-cyan);
-    border-color: rgba(0, 240, 255, 0.2);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500; padding: 4px 12px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);
+  background: transparent; cursor: pointer; transition: all 0.2s ease; color: var(--text-secondary);
+  &.tbl-btn-ghost { color: var(--neon-cyan); border-color: rgba(0, 240, 255, 0.2);
     &:hover { background: rgba(0, 240, 255, 0.08); }
   }
-
-  &.tbl-btn-danger {
-    color: var(--neon-magenta);
-    border-color: rgba(255, 45, 120, 0.2);
+  &.tbl-btn-danger { color: var(--neon-magenta); border-color: rgba(255, 45, 120, 0.2);
     &:hover { background: rgba(255, 45, 120, 0.08); }
   }
-
-  &.tbl-btn-ok {
-    color: var(--neon-green);
-    border-color: rgba(0, 255, 136, 0.2);
+  &.tbl-btn-ok { color: var(--neon-green); border-color: rgba(0, 255, 136, 0.2);
     &:hover { background: rgba(0, 255, 136, 0.08); }
   }
-
-  &.tbl-btn-warn {
-    color: var(--neon-amber);
-    border-color: rgba(255, 170, 0, 0.2);
+  &.tbl-btn-warn { color: var(--neon-amber); border-color: rgba(255, 170, 0, 0.2);
     &:hover { background: rgba(255, 170, 0, 0.08); }
   }
 }
 
-.pagination-bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
+.pagination-bar { display: flex; justify-content: flex-end; margin-top: 20px; }
 </style>
