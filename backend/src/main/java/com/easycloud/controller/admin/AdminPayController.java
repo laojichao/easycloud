@@ -41,6 +41,9 @@ public class AdminPayController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String status) {
+        if (page < 1) page = 1;
+        if (size < 1) size = 1;
+        if (size > 500) size = 500;
         IPage<PaymentOrder> orderPage = paymentService.getAllOrderList(page, size, status);
         return Result.ok(orderPage);
     }

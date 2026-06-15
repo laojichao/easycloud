@@ -2,6 +2,7 @@ package com.easycloud.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.easycloud.common.InputSanitizer;
 import com.easycloud.common.Result;
 import com.easycloud.entity.App;
 import com.easycloud.entity.AppKm;
@@ -75,9 +76,10 @@ public class AdminKmController {
             wrapper.eq(AppKm::getAppid, appid);
         }
         if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like(AppKm::getKami, keyword)
-                    .or().like(AppKm::getNote, keyword)
-                    .or().like(AppKm::getUser, keyword));
+            String safeKeyword = InputSanitizer.escapeLike(keyword);
+            wrapper.and(w -> w.like(AppKm::getKami, safeKeyword)
+                    .or().like(AppKm::getNote, safeKeyword)
+                    .or().like(AppKm::getUser, safeKeyword));
         }
         if (StringUtils.hasText(state)) {
             wrapper.eq(AppKm::getState, state);
@@ -111,6 +113,7 @@ public class AdminKmController {
     /**
      * 生成卡密
      */
+    @Transactional
     @PostMapping("/generate")
     public Result<?> generate(@RequestBody Map<String, Object> body) {
         if (body.get("appid") == null) {
@@ -235,6 +238,7 @@ public class AdminKmController {
      * 批量操作
      * action: enable, disable, delete, unbind, add_time, sub_time, export, add_time_all, sub_time_all, unbind_all
      */
+    @Transactional
     @PostMapping("/batch")
     public Result<?> batch(@RequestBody Map<String, Object> body) {
         String action = (String) body.get("action");

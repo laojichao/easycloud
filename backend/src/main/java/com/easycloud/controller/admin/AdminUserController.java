@@ -2,6 +2,7 @@ package com.easycloud.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.easycloud.common.InputSanitizer;
 import com.easycloud.common.Md5Util;
 import com.easycloud.common.Result;
 import com.easycloud.entity.User;
@@ -41,12 +42,16 @@ public class AdminUserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword) {
+        if (page < 1) page = 1;
+        if (size < 1) size = 1;
+        if (size > 500) size = 500;
 
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
-            wrapper.like(User::getUser, keyword)
-                    .or().like(User::getQq, keyword)
-                    .or().like(User::getEmail, keyword);
+            String safeKeyword = InputSanitizer.escapeLike(keyword);
+            wrapper.like(User::getUser, safeKeyword)
+                    .or().like(User::getQq, safeKeyword)
+                    .or().like(User::getEmail, safeKeyword);
         }
         wrapper.orderByDesc(User::getUid);
 

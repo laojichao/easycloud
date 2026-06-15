@@ -2,6 +2,7 @@ package com.easycloud.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.easycloud.common.InputSanitizer;
 import com.easycloud.common.Result;
 import com.easycloud.entity.App;
 import com.easycloud.entity.AppFile;
@@ -67,11 +68,15 @@ public class AdminAppController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword) {
+        if (page < 1) page = 1;
+        if (size < 1) size = 1;
+        if (size > 500) size = 500;
 
         LambdaQueryWrapper<App> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
-            wrapper.like(App::getName, keyword)
-                    .or().like(App::getNote, keyword);
+            String safeKeyword = InputSanitizer.escapeLike(keyword);
+            wrapper.like(App::getName, safeKeyword)
+                    .or().like(App::getNote, safeKeyword);
         }
         wrapper.orderByDesc(App::getId);
 
@@ -104,12 +109,11 @@ public class AdminAppController {
                 return Result.fail("应用名称已存在");
             }
         }
-        app.setDate(LocalDateTime.now());
+        // 安全限制：不允许通过此接口设置敏感字段
+        app.setAppkey(generateAppKey());
         app.setTotal("0");
+        app.setDate(LocalDateTime.now());
         if (app.getActive() == null) app.setActive("y");
-        if (app.getAppkey() == null || app.getAppkey().isEmpty()) {
-            app.setAppkey(generateAppKey());
-        }
         appMapper.insert(app);
         log.info("创建应用: id={}, name={}", app.getId(), app.getName());
         return Result.ok("创建成功", app);
@@ -130,8 +134,22 @@ public class AdminAppController {
                 return Result.fail("应用名称已存在");
             }
         }
-        app.setId(id);
-        appMapper.updateById(app);
+        // 安全限制：仅更新允许的字段，防止 mass assignment 覆盖 appkey/total/安全配置等
+        App existing = appMapper.selectById(id);
+        if (existing == null) return Result.fail("应用不存在");
+        if (app.getName() != null) existing.setName(app.getName());
+        if (app.getImg() != null) existing.setImg(app.getImg());
+        if (app.getNote() != null) existing.setNote(app.getNote());
+        if (app.getAppGg() != null) existing.setAppGg(app.getAppGg());
+        if (app.getVersion() != null) existing.setVersion(app.getVersion());
+        if (app.getVersionInfo() != null) existing.setVersionInfo(app.getVersionInfo());
+        if (app.getAppUpdateUrl() != null) existing.setAppUpdateUrl(app.getAppUpdateUrl());
+        if (app.getAppUpdateUrlType() != null) existing.setAppUpdateUrlType(app.getAppUpdateUrlType());
+        if (app.getLanzouPass() != null) existing.setLanzouPass(app.getLanzouPass());
+        if (app.getAppUpdateMust() != null) existing.setAppUpdateMust(app.getAppUpdateMust());
+        if (app.getAppUpdateShow() != null) existing.setAppUpdateShow(app.getAppUpdateShow());
+        if (app.getActive() != null) existing.setActive(app.getActive());
+        appMapper.updateById(existing);
         log.info("更新应用: id={}", id);
         return Result.ok("更新成功");
     }

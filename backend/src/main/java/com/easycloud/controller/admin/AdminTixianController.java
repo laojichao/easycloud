@@ -32,6 +32,9 @@ public class AdminTixianController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) Integer status) {
+        if (page < 1) page = 1;
+        if (size < 1) size = 1;
+        if (size > 500) size = 500;
         return Result.ok(tixianService.getAll(page, size, status));
     }
 
@@ -41,7 +44,11 @@ public class AdminTixianController {
     @PostMapping("/{id}/approve")
     public Result<?> approve(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {
-            BigDecimal realmoney = new BigDecimal(body.get("realmoney").toString());
+            Object realmoneyObj = body.get("realmoney");
+            if (realmoneyObj == null) {
+                return Result.fail("实际到账金额不能为空");
+            }
+            BigDecimal realmoney = new BigDecimal(realmoneyObj.toString());
             tixianService.approve(id, realmoney);
             return Result.ok("批准成功");
         } catch (RuntimeException e) {

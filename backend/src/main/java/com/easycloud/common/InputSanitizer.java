@@ -102,6 +102,18 @@ public class InputSanitizer {
     }
 
     /**
+     * 转义 LIKE 查询中的通配符（防止 % 和 _ 被滥用为通配符）
+     * 用于 MyBatis-Plus 的 .like() 调用前的安全处理
+     *
+     * @param value 原始搜索关键词
+     * @return 转义后的字符串（% → \%, _ → \_, \ → \\）
+     */
+    public static String escapeLike(String value) {
+        if (value == null) return null;
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    /**
      * 净化 API 参数 Map 中的所有值
      */
     public static java.util.Map<String, String> purgeParams(java.util.Map<String, String> params) {

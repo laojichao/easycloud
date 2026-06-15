@@ -156,12 +156,9 @@ public class AdminSettingController {
             return Result.fail("请输入当前密码确认操作");
         }
         String currentPwd = configService.getSetting("admin_pwd");
+        // 仅支持 MD5 哈希比对，禁止明文密码回退（安全要求）
         String encryptedOldPwd = Md5Util.encryptPassword(oldPwd);
         boolean passwordMatch = encryptedOldPwd.equals(currentPwd);
-        // 仅当配置的密码不是MD5格式(32位hex)时，才允许明文匹配（兼容初始安装）
-        if (!passwordMatch && currentPwd != null && currentPwd.length() != 32) {
-            passwordMatch = oldPwd.equals(currentPwd);
-        }
         if (!passwordMatch) {
             return Result.fail("密码错误");
         }

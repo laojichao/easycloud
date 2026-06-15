@@ -2,6 +2,7 @@ package com.easycloud.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.easycloud.common.InputSanitizer;
 import com.easycloud.common.Result;
 import com.easycloud.entity.AppFile;
 import com.easycloud.mapper.AppFileMapper;
@@ -48,14 +49,18 @@ public class AdminFileController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) Long appid,
             @RequestParam(required = false) String keyword) {
+        if (page < 1) page = 1;
+        if (size < 1) size = 1;
+        if (size > 500) size = 500;
 
         LambdaQueryWrapper<AppFile> wrapper = new LambdaQueryWrapper<>();
         if (appid != null) {
             wrapper.eq(AppFile::getAppid, appid);
         }
         if (StringUtils.hasText(keyword)) {
-            wrapper.like(AppFile::getNote, keyword)
-                    .or().like(AppFile::getFileUrl, keyword);
+            String safeKeyword = InputSanitizer.escapeLike(keyword);
+            wrapper.like(AppFile::getNote, safeKeyword)
+                    .or().like(AppFile::getFileUrl, safeKeyword);
         }
         wrapper.orderByDesc(AppFile::getId);
 
@@ -130,6 +135,7 @@ public class AdminFileController {
     /**
      * 批量操作
      */
+    @org.springframework.transaction.annotation.Transactional
     @PostMapping("/batch")
     public Result<?> batch(@RequestBody Map<String, Object> body) {
         String action = (String) body.get("action");
