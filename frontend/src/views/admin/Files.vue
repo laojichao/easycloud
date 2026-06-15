@@ -95,20 +95,61 @@
 </template>
 
 <script setup>
+/**
+ * 文件管理页面
+ *
+ * 功能：
+ * - 展示文件列表（分页，显示应用ID/文件链接/类型/备注/状态/操作）
+ * - 添加/编辑文件（对话框表单：应用ID、文件链接、链接类型、蓝奏云密码、备注）
+ * - 切换文件启用/禁用状态
+ * - 删除文件（二次确认）
+ *
+ * 蓝奏云链接处理：
+ * - 支持两种链接类型：direct（直链）和 lanzou（蓝奏云）
+ * - 蓝奏云类型可设置分享密码（lanzouPass），客户端获取文件时需要密码
+ *
+ * 对应后端端点：/api/admin/file/**
+ */
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getFileList, createFile, updateFile, deleteFile, toggleFile } from '@/api/admin'
 
+/** 文件列表数据 */
 const list = ref([])
+
+/** 列表总条数 */
 const total = ref(0)
+
+/** 当前页码 */
 const currentPage = ref(1)
+
+/** 每页条数 */
 const pageSize = ref(20)
+
+/** 列表加载状态 */
 const loading = ref(false)
+
+/** 新建/编辑对话框是否可见 */
 const dialogVisible = ref(false)
+
+/** 保存按钮加载状态 */
 const saving = ref(false)
+
+/**
+ * 当前编辑的文件 ID
+ * null 表示新建模式，非 null 表示编辑模式
+ */
 const editId = ref(null)
 
+/**
+ * 文件表单数据
+ * @property {string|number} appid - 关联的应用 ID
+ * @property {string} fileUrl - 文件下载链接
+ * @property {string} type - 链接类型（direct直链/lanzou蓝奏云）
+ * @property {string} lanzouPass - 蓝奏云分享密码（仅 lanzou 类型时使用）
+ * @property {string} note - 文件备注说明
+ */
 const form = reactive({
   appid: '',
   fileUrl: '',
@@ -117,8 +158,12 @@ const form = reactive({
   note: ''
 })
 
+/** 页面挂载时加载文件列表 */
 onMounted(() => loadData())
 
+/**
+ * 加载文件列表数据
+ */
 async function loadData() {
   loading.value = true
   try {
@@ -132,8 +177,13 @@ async function loadData() {
   }
 }
 
+/**
+ * 显示新建/编辑对话框
+ * @param {Object|null} row - 传入行数据为编辑模式，传入 null 为新建模式
+ */
 function showDialog(row) {
   if (row) {
+    // 编辑模式：用行数据填充表单
     editId.value = row.id
     Object.assign(form, {
       appid: row.appid,
@@ -143,12 +193,17 @@ function showDialog(row) {
       note: row.note || ''
     })
   } else {
+    // 新建模式：清空表单
     editId.value = null
     Object.assign(form, { appid: '', fileUrl: '', type: 'direct', lanzouPass: '', note: '' })
   }
   dialogVisible.value = true
 }
 
+/**
+ * 保存文件（新建或更新）
+ * 根据 editId 判断调用 createFile 或 updateFile
+ */
 async function handleSave() {
   saving.value = true
   try {
@@ -167,6 +222,10 @@ async function handleSave() {
   }
 }
 
+/**
+ * 切换文件启用/禁用状态
+ * @param {Object} row - 文件行数据
+ */
 async function handleToggle(row) {
   const res = await toggleFile(row.id)
   if (res.code === 200) {
@@ -177,6 +236,10 @@ async function handleToggle(row) {
   }
 }
 
+/**
+ * 删除文件（带二次确认）
+ * @param {Object} row - 文件行数据
+ */
 async function handleDelete(row) {
   await ElMessageBox.confirm('确定删除？', '确认删除', { type: 'warning' })
   const res = await deleteFile(row.id)

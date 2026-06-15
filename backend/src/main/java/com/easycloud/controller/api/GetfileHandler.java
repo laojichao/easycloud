@@ -12,7 +12,16 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
- * 获取文件列表 - 对应 PHP api/api/getfile/index.php
+ * 文件列表获取处理器
+ * <p>
+ * 处理客户端获取应用文件下载列表的请求，返回启用状态的文件列表。
+ * 支持蓝奏云链接自动解析为直接下载地址。
+ * 属于白名单接口，不需要加密和签名验证。
+ * <p>
+ * 对应原 PHP 文件: api/api/getfile/index.php
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 @Slf4j
 @Component
@@ -21,6 +30,13 @@ public class GetfileHandler {
 
     private final AppFileMapper appFileMapper;
 
+    /**
+     * 处理获取文件列表请求
+     *
+     * @param app     应用配置对象
+     * @param dataArr 请求参数，可选 id 参数用于筛选特定文件
+     * @return 包含文件列表的响应 Map
+     */
     public Map<String, Object> handle(App app, Map<String, String> dataArr) {
         Long appId = app.getId();
 

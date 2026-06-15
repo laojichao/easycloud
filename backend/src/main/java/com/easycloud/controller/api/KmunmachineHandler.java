@@ -14,7 +14,23 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 卡密解绑 - 对应 PHP api/api/kmunmachine/index.php
+ * 卡密解绑处理器
+ * <p>
+ * 处理客户端申请卡密解绑（换机）的请求，允许用户将已绑定的卡密解除与当前机器码的绑定。
+ * <p>
+ * 解绑规则：
+ * <ul>
+ *   <li>需要应用开启解绑功能（kmUnmachine=y）</li>
+ *   <li>解绑次数受应用配置限制（kmChange）</li>
+ *   <li>解绑时间间隔受应用配置限制（kmChangeTime，单位：小时）</li>
+ *   <li>时长卡解绑可能扣除一定时长（kmChangeNum）</li>
+ *   <li>次数卡解绑可能扣除一定次数（singleKmChangeNum）</li>
+ * </ul>
+ * <p>
+ * 对应原 PHP 文件: api/api/kmunmachine/index.php
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 @Component
 @RequiredArgsConstructor
@@ -94,6 +110,9 @@ public class KmunmachineHandler {
      */
     private Map<String, Object> handleCodeUnbind(App app, AppKm km, long now) {
         String kmTime = km.getKmTime();
+        if (kmTime == null || kmTime.isEmpty()) {
+            return ApiController.buildErrorResponse(201, "卡密时长类型未配置", app, null);
+        }
 
         // 永久卡
         if ("longuse".equals(kmTime)) {
@@ -121,6 +140,9 @@ public class KmunmachineHandler {
 
         // 普通时长卡
         String endTimeStr = km.getEndTime();
+        if (endTimeStr == null || endTimeStr.isEmpty()) {
+            return ApiController.buildErrorResponse(201, "卡密状态异常", app, null);
+        }
         try {
             long endTime = Long.parseLong(endTimeStr);
             if (endTime < now) {

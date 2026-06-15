@@ -13,17 +13,35 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 蓝奏云链接解析器 - 精确复刻 PHP lanzou() / send_post() / getRedirect() 函数
- * 将蓝奏云分享链接解析为直接下载链接
+ * 蓝奏云链接解析器
+ * <p>
+ * 精确复刻原 PHP 项目的蓝奏云文件分享链接解析逻辑。
+ * 将蓝奏云分享链接（https://www.lanzoui.com/xxxxx）解析为直接下载链接。
+ * <p>
+ * 解析流程：
+ * <ol>
+ *   <li>从分享链接中提取文件 ID</li>
+ *   <li>访问分享页面获取页面内容</li>
+ *   <li>判断是否需要密码</li>
+ *   <li>从页面 JavaScript 中提取下载链接变量</li>
+ *   <li>跟踪重定向获取最终下载地址</li>
+ * </ol>
+ * <p>
+ * 对应原 PHP 文件: includes/global.php 中的 lanzou(), send_post(), getRedirect() 函数
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 @Slf4j
 public class LanzouResolver {
 
+    /** HTTP 客户端实例（连接超时 15 秒，自动跟踪重定向） */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(15))
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
+    /** 模拟 iPhone 浏览器的 User-Agent（与原 PHP 保持一致） */
     private static final String USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 6_0 like Mac X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5376e Safari/8536.25";
 
     /**

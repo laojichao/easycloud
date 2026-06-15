@@ -1,18 +1,28 @@
 package com.easycloud.controller.admin;
 
 import com.easycloud.common.JwtUtil;
+import com.easycloud.common.Md5Util;
 import com.easycloud.common.Result;
+import com.easycloud.entity.User;
 import com.easycloud.service.ConfigService;
+import com.easycloud.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 管理员认证 - 对应 PHP admin/login.php
+ * 管理员认证控制器
+ * <p>
+ * 处理管理员登录、信息获取和 SSO 模拟登录功能。
+ * 管理员账号密码存储在系统配置（yixi_config）中，支持明文和 MD5 两种密码存储方式。
+ * 登录成功后返回 JWT Token，后续管理后台请求通过 Token 鉴权。
+ * <p>
+ * 对应原 PHP 文件: admin/login.php
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -21,9 +31,7 @@ public class AdminAuthController {
 
     private final JwtUtil jwtUtil;
     private final ConfigService configService;
-
-    /** 密码盐值 - 对应 PHP $password_hash = '!@#%!s!0' */
-    private static final String PASSWORD_SALT = "!@#%!s!0";
+    private final UserService userService;
 
     /**
      * 管理员登录
@@ -49,8 +57,12 @@ public class AdminAuthController {
         }
 
         // 密码验证: 兼容 PHP 明文存储 和 Java md5 存储
-        String encryptedPwd = md5(password + PASSWORD_SALT);
-        boolean passwordMatch = password.equals(configPwd) || encryptedPwd.equals(configPwd);
+        String encryptedPwd = Md5Util.encryptPassword(password);
+        boolean passwordMatch = encryptedPwd.equals(configPwd);
+        // 仅当配置的密码不是MD5格式(32位hex)时，才允许明文匹配（兼容初始安装）
+        if (!passwordMatch && configPwd != null && configPwd.length() != 32) {
+            passwordMatch = password.equals(configPwd);
+        }
 
         if (!username.equals(configUser) || !passwordMatch) {
             return Result.fail("用户名或密码错误");
@@ -81,17 +93,33 @@ public class AdminAuthController {
         return Result.ok(data);
     }
 
-    private String md5(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(32);
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b & 0xFF));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("MD5 not available", e);
+    /**
+     * SSO 模拟登录 - 管理员模拟登录为指定用户
+     * <p>
+     * 生成以用户 UID 为 subject 的 JWT Token，用于管理员以普通用户身份进行调试操作。
+     *
+     * @param uid 用户 UID
+     * @return 包含 token 和用户信息的结果
+     */
+    @PostMapping("/sso/{uid}")
+    public Result<Map<String, Object>> sso(@PathVariable Long uid) {
+        if (uid == null || uid <= 0) {
+            return Result.fail("无效的用户ID");
         }
+
+        User user = userService.getByUid(uid);
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+
+        // 生成 JWT Token，subject = uid.toString()
+        String token = jwtUtil.generateToken(uid.toString());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("token", token);
+        data.put("uid", uid);
+        data.put("username", user.getUser());
+
+        return Result.ok("模拟登录成功", data);
     }
 }

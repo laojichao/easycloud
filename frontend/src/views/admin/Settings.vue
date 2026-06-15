@@ -93,21 +93,56 @@
 </template>
 
 <script setup>
+/**
+ * 系统设置页面
+ *
+ * 功能分类：
+ * 1. 站点设置（site）：配置站点名称、站点URL、客服QQ、备案号
+ * 2. 修改密码（password）：修改管理员登录密码（需填写旧密码和新密码）
+ * 3. 系统维护（maintenance）：刷新 Redis 缓存（从数据库重新加载配置）
+ *
+ * 设置保存流程：
+ * - 页面加载时调用 GET /api/admin/setting 读取当前设置
+ * - 用户修改后点击保存，调用 POST /api/admin/setting 写入
+ *
+ * 密码修改流程：
+ * - 填写旧密码和新密码 -> POST /api/admin/setting/change-password
+ * - 成功后清空表单
+ *
+ * 缓存刷新：
+ * - 点击执行按钮 -> POST /api/admin/setting/refresh-cache
+ */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Setting, Lock, Refresh, Check } from '@element-plus/icons-vue'
 import { getSettings, saveSettings, refreshCache, changePassword } from '@/api/admin'
 
+/** 当前激活的 Tab 页（site/password/maintenance） */
 const activeTab = ref('site')
+
+/** 站点设置保存按钮加载状态 */
 const saving = ref(false)
+
+/** 密码修改按钮加载状态 */
 const changingPwd = ref(false)
 
+/**
+ * Tab 页配置
+ * @type {Array<{key: string, label: string, icon: string}>}
+ */
 const tabs = [
   { key: 'site', label: '站点设置', icon: 'Setting' },
   { key: 'password', label: '修改密码', icon: 'Lock' },
   { key: 'maintenance', label: '系统维护', icon: 'Refresh' },
 ]
 
+/**
+ * 站点设置表单数据
+ * @property {string} sitename - 站点名称（显示在前端页面标题等位置）
+ * @property {string} siteurl - 站点 URL（用于生成完整链接）
+ * @property {string} kfqq - 客服 QQ 号（显示在前端联系方式中）
+ * @property {string} beian - ICP 备案号（显示在页脚）
+ */
 const settings = reactive({
   sitename: '',
   siteurl: '',
@@ -115,15 +150,25 @@ const settings = reactive({
   beian: ''
 })
 
+/**
+ * 密码修改表单
+ * @property {string} old_password - 当前密码
+ * @property {string} new_password - 新密码（至少6位）
+ */
 const pwdForm = reactive({
   old_password: '',
   new_password: ''
 })
 
+/**
+ * 页面挂载时加载当前系统设置
+ * 将后端返回的设置数据填充到 settings 响应式对象中
+ */
 onMounted(async () => {
   try {
     const res = await getSettings()
     if (res.code === 200 && res.data) {
+      // 只更新 settings 中已定义的字段，避免覆盖未知字段
       Object.keys(settings).forEach(key => {
         if (res.data[key] !== undefined) {
           settings[key] = res.data[key]
@@ -135,6 +180,10 @@ onMounted(async () => {
   }
 })
 
+/**
+ * 保存站点设置
+ * 将当前 settings 表单数据提交到后端
+ */
 async function handleSave() {
   saving.value = true
   try {
@@ -149,6 +198,10 @@ async function handleSave() {
   }
 }
 
+/**
+ * 修改管理员密码
+ * 验证旧密码和新密码非空后提交，成功后清空表单
+ */
 async function handleChangePwd() {
   if (!pwdForm.old_password || !pwdForm.new_password) {
     ElMessage.warning('请填写完整')
@@ -159,6 +212,7 @@ async function handleChangePwd() {
     const res = await changePassword(pwdForm)
     if (res.code === 200) {
       ElMessage.success('密码修改成功')
+      // 清空密码表单
       pwdForm.old_password = ''
       pwdForm.new_password = ''
     } else {
@@ -169,10 +223,16 @@ async function handleChangePwd() {
   }
 }
 
+/**
+ * 刷新系统缓存
+ * 从数据库重新加载配置到 Redis 缓存，确保配置变更立即生效
+ */
 async function handleRefreshCache() {
   const res = await refreshCache()
   if (res.code === 200) {
     ElMessage.success('缓存刷新成功')
+  } else {
+    ElMessage.error(res.msg || '缓存刷新失败')
   }
 }
 </script>

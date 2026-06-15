@@ -9,7 +9,8 @@ CREATE TABLE `yixi_appfile` (
   `addtime` timestamp NULL DEFAULT NULL COMMENT '添加时间',
   `state` enum('y','n') DEFAULT 'y' COMMENT '状态',
   `note` varchar(255) DEFAULT NULL COMMENT '备注',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_appfile_appid` (`appid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `yixi_appkm`;
@@ -31,7 +32,11 @@ CREATE TABLE `yixi_appkm` (
   `user_ip` varchar(15) DEFAULT NULL COMMENT '使用者IP',
   `km_change_time` bigint(11) DEFAULT NULL COMMENT '卡密解绑时间',
   `state` enum('y','n') DEFAULT 'y' COMMENT '状态',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_appkm_kami_appid` (`kami`, `appid`),
+  KEY `idx_appkm_appid` (`appid`),
+  KEY `idx_appkm_state` (`state`),
+  KEY `idx_appkm_km_use` (`km_use`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `yixi_apps`;
@@ -54,6 +59,7 @@ CREATE TABLE `yixi_apps` (
   `print_sign` enum('y','n') DEFAULT 'n' COMMENT '调试模式',
   `mi_time` int(10) DEFAULT '10' COMMENT '时间差效验',
   `rc4_key` varchar(255) DEFAULT NULL COMMENT 'RC4秘钥',
+  `mi_rsa_private_key` text COMMENT 'RSA私钥',
   `active` enum('y','n') DEFAULT 'y' COMMENT '是否运行',
   `logon_check_in` enum('y','n') DEFAULT 'y' COMMENT '登录校验设备信息',
   `sqprice` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '应用卡密销售价格',
@@ -103,7 +109,9 @@ CREATE TABLE `yixi_log` (
   `ip` varchar(20) DEFAULT NULL,
   `city` varchar(20) DEFAULT NULL,
   `date` datetime NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_log_date` (`date`),
+  KEY `idx_log_type` (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `yixi_cache`;
@@ -123,4 +131,173 @@ CREATE TABLE IF NOT EXISTS `yixi_sig` (
   `vpntype` int(2) DEFAULT '1' COMMENT '检测到vpn措施',
   `safetype` int(2) DEFAULT '1' COMMENT '安全检查措施',
   `addtime` timestamp NULL DEFAULT NULL COMMENT '添加时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 用户表
+DROP TABLE IF EXISTS `yixi_user`;
+CREATE TABLE `yixi_user` (
+  `uid` int(11) NOT NULL AUTO_INCREMENT,
+  `user` varchar(64) NOT NULL,
+  `pwd` varchar(64) NOT NULL,
+  `rmb` decimal(10,2) DEFAULT '0.00',
+  `qq` varchar(20) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `ip` varchar(45) DEFAULT NULL,
+  `regdate` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`uid`),
+  UNIQUE KEY `uk_yixi_user` (`user`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 支付订单表
+DROP TABLE IF EXISTS `yixi_payment_order`;
+CREATE TABLE `yixi_payment_order` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `order_no` varchar(32) NOT NULL,
+  `uid` bigint(20) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `pay_type` varchar(10) NOT NULL,
+  `status` varchar(10) NOT NULL DEFAULT 'pending',
+  `trade_no` varchar(64) DEFAULT NULL,
+  `create_time` timestamp NOT NULL,
+  `pay_time` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_no` (`order_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 签到表
+DROP TABLE IF EXISTS `yixi_qiandao`;
+CREATE TABLE `yixi_qiandao` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `uid` bigint(20) NOT NULL,
+  `date` date NOT NULL,
+  `reward` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `addtime` timestamp NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_qiandao_uid_date` (`uid`, `date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 工单表
+DROP TABLE IF EXISTS `yixi_workorder`;
+CREATE TABLE `yixi_workorder` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `uid` bigint(20) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `content` text NOT NULL,
+  `reply` text,
+  `status` int(11) NOT NULL DEFAULT '0',
+  `addtime` timestamp NOT NULL,
+  `replytime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_workorder_uid` (`uid`),
+  KEY `idx_workorder_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 邀请返利表
+DROP TABLE IF EXISTS `yixi_invitelog`;
+CREATE TABLE `yixi_invitelog` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `uid` bigint(20) NOT NULL,
+  `qq` varchar(64) DEFAULT NULL,
+  `type` varchar(32) DEFAULT NULL,
+  `money` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `bz` varchar(255) DEFAULT NULL,
+  `creation_time` timestamp NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_invitelog_uid` (`uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 积分记录表
+DROP TABLE IF EXISTS `yixi_points`;
+CREATE TABLE `yixi_points` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `uid` bigint(20) NOT NULL,
+  `point` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `order_id` varchar(64) DEFAULT NULL,
+  `action` varchar(32) DEFAULT NULL,
+  `addtime` timestamp NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_points_uid` (`uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 提现表
+DROP TABLE IF EXISTS `yixi_tixian`;
+CREATE TABLE `yixi_tixian` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `uid` bigint(20) NOT NULL,
+  `account` varchar(128) NOT NULL,
+  `name` varchar(64) NOT NULL,
+  `money` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `realmoney` decimal(10,2) DEFAULT NULL,
+  `status` int(11) NOT NULL DEFAULT '0',
+  `type` varchar(32) DEFAULT NULL,
+  `addtime` timestamp NOT NULL,
+  `endtime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_tixian_uid` (`uid`),
+  KEY `idx_tixian_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 应用用户关联表
+DROP TABLE IF EXISTS `yixi_appuser`;
+CREATE TABLE `yixi_appuser` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `appid` int(11) NOT NULL,
+  `uid` int(11) NOT NULL,
+  `status` varchar(1) DEFAULT 'y',
+  `addtime` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_appuser_appid` (`appid`),
+  KEY `idx_appuser_uid` (`uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 用户接口关联表
+DROP TABLE IF EXISTS `yixi_userjk`;
+CREATE TABLE `yixi_userjk` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uid` int(11) NOT NULL,
+  `appid` int(11) NOT NULL,
+  `api_name` varchar(50) DEFAULT NULL,
+  `status` varchar(1) DEFAULT 'y',
+  `addtime` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_userjk_uid` (`uid`),
+  KEY `idx_userjk_appid` (`appid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 站点/分站表
+DROP TABLE IF EXISTS `yixi_site`;
+CREATE TABLE `yixi_site` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uid` int(11) NOT NULL,
+  `domain` varchar(200) DEFAULT NULL,
+  `sitename` varchar(100) DEFAULT NULL,
+  `endtime` timestamp NULL DEFAULT NULL,
+  `status` varchar(1) DEFAULT 'y',
+  `addtime` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_site_uid` (`uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 程序/产品表
+DROP TABLE IF EXISTS `yixi_program`;
+CREATE TABLE `yixi_program` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `description` text,
+  `version` varchar(50) DEFAULT NULL,
+  `download_url` text,
+  `status` varchar(1) DEFAULT 'y',
+  `addtime` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 平台消息表
+DROP TABLE IF EXISTS `yixi_message`;
+CREATE TABLE `yixi_message` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) NOT NULL,
+  `type` varchar(20) DEFAULT 'system',
+  `content` text,
+  `addtime` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

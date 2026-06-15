@@ -9,8 +9,23 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * API 加解密工具类 - 精确复刻 PHP 加密逻辑
- * 支持5种加密类型: 0=明文, 1=RC4(GBK), 2=Base64, 3=RC4(hex), 4=AES, 5=Base64v2
+ * API 加解密工具类
+ * <p>
+ * 精确复刻原 PHP 项目的加密逻辑，确保与现有客户端完全兼容。
+ * 支持 6 种加密类型：
+ * <ul>
+ *   <li>Type 0: 明文模式（无加密）</li>
+ *   <li>Type 1: 自定义 RC4 加密（GBK 编码，Hex 输出），对应 PHP mi_rc4()</li>
+ *   <li>Type 2: Base64 编码</li>
+ *   <li>Type 3: 标准 RC4 加密（Hex 编码），对应 PHP rc4()</li>
+ *   <li>Type 4: AES-128-CBC 加密（Hex 输出），对应 PHP AES()</li>
+ *   <li>Type 5: Base64 编码（与 Type 2 相同）</li>
+ * </ul>
+ * <p>
+ * 对应原 PHP 文件: includes/global.php 中的 mi_rc4(), rc4(), AES(), RSA_SMI() 函数
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 public class ApiCrypto {
 
@@ -153,9 +168,21 @@ public class ApiCrypto {
         try {
             // 构造 AES Key: 'y' + rc4_key前13字符 + 'gg' = 16字节
             // PHP: 'y'.substr($mi['rc4_key'],0,13).'gg' -- substr 超出长度时返回全部
+            // 当 rc4_key 不足13字符时，PHP 输出的 key 不足16字节，AES 会报错。
+            // Java 侧做相同行为：不足16字节时用 \0 填充（与 PHP mcrypt 行为一致）
             String rc4Part = rc4Key.length() >= 13 ? rc4Key.substring(0, 13) : rc4Key;
             String keyStr = "y" + rc4Part + "gg";
             byte[] keyBytes = keyStr.getBytes(StandardCharsets.US_ASCII);
+            // 确保 key 为 16 字节（不足时右侧补 \0）
+            if (keyBytes.length < 16) {
+                byte[] padded = new byte[16];
+                System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
+                keyBytes = padded;
+            } else if (keyBytes.length > 16) {
+                byte[] trimmed = new byte[16];
+                System.arraycopy(keyBytes, 0, trimmed, 0, 16);
+                keyBytes = trimmed;
+            }
 
             // IV: "0102030405060708" 是16个ASCII字符 = 16字节
             byte[] ivBytes = "0102030405060708".getBytes(StandardCharsets.US_ASCII);
@@ -185,6 +212,15 @@ public class ApiCrypto {
             String rc4Part = rc4Key.length() >= 13 ? rc4Key.substring(0, 13) : rc4Key;
             String keyStr = "y" + rc4Part + "gg";
             byte[] keyBytes = keyStr.getBytes(StandardCharsets.US_ASCII);
+            if (keyBytes.length < 16) {
+                byte[] padded = new byte[16];
+                System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
+                keyBytes = padded;
+            } else if (keyBytes.length > 16) {
+                byte[] trimmed = new byte[16];
+                System.arraycopy(keyBytes, 0, trimmed, 0, 16);
+                keyBytes = trimmed;
+            }
 
             byte[] ivBytes = "0102030405060708".getBytes(StandardCharsets.US_ASCII);
 

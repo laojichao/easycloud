@@ -60,6 +60,18 @@
 </template>
 
 <script setup>
+/**
+ * 管理员登录页面
+ *
+ * 登录流程：
+ * 1. 用户输入用户名和密码
+ * 2. 表单验证（用户名和密码均为必填）
+ * 3. 调用 userStore.login() 发送管理员登录请求
+ * 4. 成功后存储 admin_token，跳转到 /admin/dashboard
+ * 5. 失败则显示错误提示
+ *
+ * 对应后端端点：POST /api/admin/login
+ */
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
@@ -67,20 +79,35 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+/** 表单引用，用于触发表单验证 */
 const formRef = ref(null)
+
+/** 登录按钮加载状态 */
 const loading = ref(false)
 
+/** 登录表单数据 */
 const form = reactive({
   username: '',
   password: ''
 })
 
+/**
+ * 表单验证规则
+ * - 用户名：必填，失焦时触发验证
+ * - 密码：必填，失焦时触发验证
+ */
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+/**
+ * 处理管理员登录
+ * 验证表单 -> 调用 store 登录 -> 成功跳转仪表盘 / 失败提示错误
+ */
 async function handleLogin() {
+  // 触发表单验证，验证失败则返回
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 

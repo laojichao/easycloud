@@ -3,9 +3,13 @@ package com.easycloud.controller.admin;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.easycloud.common.Result;
+import com.easycloud.entity.App;
 import com.easycloud.entity.AppKm;
 import com.easycloud.mapper.AppKmMapper;
+import com.easycloud.mapper.AppMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,14 +18,30 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 卡密管理 - 对应 PHP admin/appkmlist.php, addappkm.php
+ * 卡密管理控制器
+ * <p>
+ * 提供卡密的生成、查询、删除、状态切换、解绑和批量操作等管理功能。
+ * 支持 7 种卡密字符结构（混合大小写+数字、大写+数字、小写+数字等）。
+ * 支持批量操作：启用、禁用、删除、解绑、加减时长、导出、清理。
+ * <p>
+ * 对应原 PHP 项目:
+ * <ul>
+ *   <li>appkmlist.php - 卡密列表</li>
+ *   <li>addappkm.php - 生成卡密</li>
+ *   <li>appkm_change.php - 卡密批量操作</li>
+ * </ul>
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/km")
 @RequiredArgsConstructor
 public class AdminKmController {
 
     private final AppKmMapper appKmMapper;
+    private final AppMapper appMapper;
 
     /** 7种卡密结构的字符池 */
     private static final String CHARS_ALL = "abcdefghijklmnopqrstuvwxyz0***REMOVED***ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -45,6 +65,10 @@ public class AdminKmController {
             @RequestParam(required = false) String state,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String useStatus) {
+
+        if (page < 1) page = 1;
+        if (size < 1) size = 1;
+        if (size > 500) size = 500;
 
         LambdaQueryWrapper<AppKm> wrapper = new LambdaQueryWrapper<>();
         if (appid != null) {
@@ -89,7 +113,22 @@ public class AdminKmController {
      */
     @PostMapping("/generate")
     public Result<?> generate(@RequestBody Map<String, Object> body) {
-        Long appId = Long.parseLong(body.get("appid").toString());
+        if (body.get("appid") == null) {
+            return Result.fail("应用ID不能为空");
+        }
+        Long appId;
+        try {
+            appId = Long.parseLong(body.get("appid").toString());
+        } catch (NumberFormatException e) {
+            return Result.fail("应用ID格式不正确");
+        }
+
+        // 验证应用是否存在
+        App app = appMapper.selectById(appId);
+        if (app == null) {
+            return Result.fail("应用不存在");
+        }
+
         String type = (String) body.getOrDefault("type", "code");
         String kmTime = (String) body.getOrDefault("km_time", "day");
         int count = Integer.parseInt(body.getOrDefault("count", "1").toString());
@@ -101,6 +140,9 @@ public class AdminKmController {
 
         if (count <= 0 || count > 10000) {
             return Result.fail("生成数量必须在1-10000之间");
+        }
+        if (prefix != null && prefix.length() >= length) {
+            return Result.fail("卡密长度必须大于前缀长度");
         }
 
         String charPool = getCharPool(structure);
@@ -142,6 +184,7 @@ public class AdminKmController {
         Map<String, Object> data = new HashMap<>();
         data.put("count", generatedKeys.size());
         data.put("keys", generatedKeys);
+        log.info("生成卡密: appId={}, count={}, type={}", appId, generatedKeys.size(), type);
         return Result.ok("生成成功", data);
     }
 
@@ -151,6 +194,7 @@ public class AdminKmController {
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable Long id) {
         appKmMapper.deleteById(id);
+        log.info("删除卡密: id={}", id);
         return Result.ok("删除成功");
     }
 
@@ -164,6 +208,9 @@ public class AdminKmController {
             return Result.fail("卡密不存在");
         }
         String value = body.get("value");
+        if (!"y".equals(value) && !"n".equals(value)) {
+            return Result.fail("状态值无效，只允许 y 或 n");
+        }
         km.setState(value);
         appKmMapper.updateById(km);
         return Result.ok("切换成功");
@@ -194,8 +241,12 @@ public class AdminKmController {
         @SuppressWarnings("unchecked")
         List<Number> ids = (List<Number>) body.get("ids");
         long hours = body.containsKey("hours") ? ((Number) body.get("hours")).longValue() : 0;
+        if (hours < 0) hours = 0;
         // 时间单位: hour/day/week/month/season/year
         String timeUnit = body.containsKey("timeUnit") ? (String) body.get("timeUnit") : "hour";
+        if (!Set.of("hour", "day", "week", "month", "season", "year").contains(timeUnit)) {
+            timeUnit = "hour";
+        }
         Long appId = body.containsKey("appid") ? Long.parseLong(body.get("appid").toString()) : null;
 
         if (action == null) {
@@ -304,6 +355,8 @@ public class AdminKmController {
      */
     private void adjustTime(AppKm km, long hours) {
         if (km.getEndTime() == null) return;
+        // 永久卡不调整时长
+        if ("4102243200".equals(km.getEndTime())) return;
         try {
             long endTime = Long.parseLong(km.getEndTime());
             long newEndTime = endTime + (hours * 3600);
@@ -343,7 +396,9 @@ public class AdminKmController {
     @PostMapping("/clean")
     public Result<?> clean(@RequestBody Map<String, Object> body) {
         Long appId = body.containsKey("appid") ? Long.parseLong(body.get("appid").toString()) : null;
-        String type = (String) body.getOrDefault("type", "all");
+        // 兼容前端 useStatus 参数和后端 type 参数
+        String type = (String) body.getOrDefault("useStatus",
+                body.getOrDefault("type", "all"));
 
         LambdaQueryWrapper<AppKm> wrapper = new LambdaQueryWrapper<>();
         if (appId != null) {
@@ -368,6 +423,7 @@ public class AdminKmController {
         }
 
         int count = appKmMapper.delete(wrapper);
+        log.info("清理卡密: appId={}, type={}, deleted={}", appId, type, count);
         return Result.ok("清理成功，共删除 " + count + " 条卡密");
     }
 

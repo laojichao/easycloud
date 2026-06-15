@@ -6,6 +6,7 @@ import com.easycloud.common.Result;
 import com.easycloud.entity.AppFile;
 import com.easycloud.mapper.AppFileMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,8 +16,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 文件管理 - 对应 PHP admin/appfilelist.php, addappfile.php, appfileedit.php
+ * 文件管理控制器
+ * <p>
+ * 提供应用文件链接的增删改查和批量操作功能。
+ * 文件链接支持直链和蓝奏云网盘，客户端通过 getfile API 获取文件列表。
+ * <p>
+ * 对应原 PHP 项目:
+ * <ul>
+ *   <li>appfilelist.php - 文件列表</li>
+ *   <li>addappfile.php - 添加文件</li>
+ *   <li>appfileedit.php - 编辑文件</li>
+ * </ul>
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/file")
 @RequiredArgsConstructor
@@ -74,6 +89,7 @@ public class AdminFileController {
             file.setState("y");
         }
         appFileMapper.insert(file);
+        log.info("创建文件记录: id={}, appid={}, url={}", file.getId(), file.getAppid(), file.getFileUrl());
         return Result.ok("创建成功", file);
     }
 
@@ -107,6 +123,7 @@ public class AdminFileController {
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable Long id) {
         appFileMapper.deleteById(id);
+        log.info("删除文件记录: id={}", id);
         return Result.ok("删除成功");
     }
 

@@ -6,6 +6,11 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
+/**
+ * 卡密 Mapper
+ * 对应实体 {@link AppKm}，表 yixi_appkm
+ * 提供卡密的 CRUD 操作及卡密登录、解绑等自定义更新方法
+ */
 @Mapper
 public interface AppKmMapper extends BaseMapper<AppKm> {
 
@@ -28,9 +33,9 @@ public interface AppKmMapper extends BaseMapper<AppKm> {
     int updateSingleLogin(@Param("id") Long id, @Param("useTime") long useTime, @Param("amount") int amount, @Param("user") String user, @Param("userIp") String userIp, @Param("kmUse") String kmUse);
 
     /**
-     * 扣减次数卡 amount
+     * 扣减次数卡 amount（仅在 amount > 0 时扣减，防止并发导致负数）
      */
-    @Update("UPDATE yixi_appkm SET amount = amount - 1 WHERE id = #{id}")
+    @Update("UPDATE yixi_appkm SET amount = amount - 1 WHERE id = #{id} AND amount > 0")
     int decreaseAmount(@Param("id") Long id);
 
     /**

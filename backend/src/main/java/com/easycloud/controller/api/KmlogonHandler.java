@@ -1,6 +1,7 @@
 package com.easycloud.controller.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.easycloud.common.ClientIpUtil;
 import com.easycloud.entity.App;
 import com.easycloud.entity.AppKm;
 import com.easycloud.mapper.AppKmMapper;
@@ -14,7 +15,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 卡密登录 - 对应 PHP api/api/kmlogon/index.php
+ * 卡密登录处理器
+ * <p>
+ * 处理客户端使用卡密登录/激活的请求，是核心业务接口。
+ * 支持两种卡密类型：
+ * <ul>
+ *   <li>时长卡（code）：按时间有效期使用，首次激活开始计时</li>
+ *   <li>次数卡（single）：按使用次数扣减，每次登录消耗一次</li>
+ * </ul>
+ * <p>
+ * 处理逻辑包括：卡密有效性验证、机器码绑定、IP绑定验证、到期时间计算等。
+ * <p>
+ * 对应原 PHP 文件: api/api/kmlogon/index.php
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 @Component
 @RequiredArgsConstructor
@@ -52,7 +67,7 @@ public class KmlogonHandler {
         }
         markcode = markcode.trim();
 
-        String clientIp = getClientIp(request);
+        String clientIp = ClientIpUtil.getClientIp(request);
 
         // 免费模式 - 直接登录
         if ("n".equals(app.getSwitch_())) {
@@ -113,6 +128,9 @@ public class KmlogonHandler {
      */
     private Map<String, Object> handleCodeType(App app, AppKm km, String kami, String markcode, String clientIp, long now) {
         String kmTime = km.getKmTime();
+        if (kmTime == null || kmTime.isEmpty()) {
+            return ApiController.buildErrorResponse(201, "卡密时长类型未配置", app, null);
+        }
         Long secondsPerUnit = TIME_UNIT_SECONDS.get(kmTime);
 
         // 全新卡密 - 首次使用
@@ -170,8 +188,8 @@ public class KmlogonHandler {
     private Map<String, Object> handleSingleType(App app, AppKm km, String kami, String markcode, String clientIp, long now) {
         int amount = km.getAmount() != null ? km.getAmount() : 0;
 
-        // PHP: if($res_kami['amount'] <= 0)out(201,...) -- 拒绝负数，但 amount=0 允许再登录一次
-        if (amount < 0) {
+        // PHP: if($res_kami['amount'] <= 0)out(201,...) -- 次数耗尽
+        if (amount <= 0) {
             return ApiController.buildErrorResponse(201, "卡密已到期", app, null);
         }
 
@@ -191,9 +209,12 @@ public class KmlogonHandler {
             return ApiController.buildSuccessResponse(data, app, null);
         }
 
-        // 已使用过 - 扣减次数
-        if (appKmMapper.decreaseAmount(km.getId()) <= 0) {
-            return ApiController.buildErrorResponse(201, "登录失败，请重试", app, null);
+        // 已使用过 - 扣减次数（使用乐观锁，仅在 amount > 0 时扣减）
+        // 无限次卡不扣减
+        if (amount != SINGLE_UNLIMITED) {
+            if (appKmMapper.decreaseAmount(km.getId()) <= 0) {
+                return ApiController.buildErrorResponse(201, "卡密次数已用完", app, null);
+            }
         }
         String vip = String.valueOf(now + 3600);
         Map<String, Object> data = new LinkedHashMap<>();
@@ -202,24 +223,4 @@ public class KmlogonHandler {
         return ApiController.buildSuccessResponse(data, app, null);
     }
 
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-            for (String part : ip.split(",")) {
-                String trimmed = part.trim();
-                if (!trimmed.startsWith("10.") && !trimmed.startsWith("172.16.") && !trimmed.startsWith("192.168.")) {
-                    return trimmed;
-                }
-            }
-        }
-        ip = request.getHeader("X-Real-IP");
-        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-            return ip;
-        }
-        ip = request.getHeader("CF-Connecting-IP");
-        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-            return ip;
-        }
-        return request.getRemoteAddr();
-    }
 }

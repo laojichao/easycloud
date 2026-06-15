@@ -6,6 +6,11 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
+/**
+ * 应用 Mapper
+ * 对应实体 {@link App}，表 yixi_apps
+ * 提供应用信息的 CRUD 操作及自定义更新方法
+ */
 @Mapper
 public interface AppMapper extends BaseMapper<App> {
 

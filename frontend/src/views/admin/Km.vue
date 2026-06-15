@@ -159,21 +159,75 @@
 </template>
 
 <script setup>
+/**
+ * 卡密管理页面
+ *
+ * 功能：
+ * - 展示卡密列表（支持分页、多条件筛选）
+ * - 生成新卡密（支持时长卡、次数卡两种类型）
+ * - 单条卡密操作（启用/禁用、解绑设备、删除）
+ *
+ * 卡密类型体系：
+ * - 时长卡（type='code'）：按时间授权，可选时长类型（小时/天/周/月/季/年/永久）
+ * - 次数卡（type='single'）：按使用次数授权，设置初始次数
+ *
+ * 筛选逻辑：
+ * - 应用 ID：精确匹配
+ * - 状态：y(启用) / n(禁用)
+ * - 类型：code(时长卡) / single(次数卡)
+ * - 使用状态：unused(未使用) / used(已使用) / expired(已过期)
+ *
+ * 卡密生成参数：
+ * - 应用 ID（必填）、卡密类型、时长/次数、生成数量、卡密长度、前缀、字符结构
+ *
+ * 对应后端端点：/api/admin/km/**
+ */
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { getKmList, generateKm, deleteKm, toggleKm, unbindKm } from '@/api/admin'
 
+/** 卡密列表数据 */
 const list = ref([])
+
+/** 列表总条数 */
 const total = ref(0)
+
+/** 当前页码 */
 const currentPage = ref(1)
+
+/** 每页条数 */
 const pageSize = ref(20)
+
+/** 列表加载状态 */
 const loading = ref(false)
+
+/** 生成卡密对话框是否可见 */
 const genDialogVisible = ref(false)
+
+/** 生成按钮加载状态 */
 const generating = ref(false)
 
+/**
+ * 筛选条件
+ * @property {string} appid - 应用 ID
+ * @property {string} state - 启用状态（y/n）
+ * @property {string} type - 卡密类型（code/single）
+ * @property {string} useStatus - 使用状态（unused/used/expired）
+ */
 const filter = reactive({ appid: '', state: '', type: '', useStatus: '' })
 
+/**
+ * 卡密生成表单
+ * @property {string|number} appid - 目标应用 ID（必填）
+ * @property {string} type - 卡密类型（code时长卡/single次数卡）
+ * @property {string} km_time - 时长类型（hour/day/week/month/season/year/longuse）
+ * @property {number} amount - 次数卡的使用次数
+ * @property {number} count - 批量生成数量
+ * @property {number} length - 卡密字符长度（8-64）
+ * @property {string} prefix - 卡密前缀（可选）
+ * @property {number} structure - 字符结构（1混合大小写+数字/2大写+数字/3小写+数字/4小写/5大写/6纯数字/7大小写）
+ */
 const genForm = reactive({
   appid: '',
   type: 'code',
@@ -185,12 +239,19 @@ const genForm = reactive({
   structure: 1
 })
 
+/** 页面挂载时加载卡密列表 */
 onMounted(() => loadData())
 
+/**
+ * 加载卡密列表
+ * 将筛选条件中非空的字段作为查询参数传给后端
+ */
 async function loadData() {
+  if (loading.value) return
   loading.value = true
   try {
     const params = { page: currentPage.value, size: pageSize.value }
+    // 只添加非空的筛选条件
     if (filter.appid) params.appid = filter.appid
     if (filter.state) params.state = filter.state
     if (filter.type) params.type = filter.type
@@ -205,10 +266,23 @@ async function loadData() {
   }
 }
 
+/** 打开生成卡密对话框 */
 function showGenerateDialog() {
+  genForm.appid = ''
+  genForm.type = 'code'
+  genForm.km_time = 'day'
+  genForm.amount = 1
+  genForm.count = 10
+  genForm.length = 16
+  genForm.prefix = ''
+  genForm.structure = 1
   genDialogVisible.value = true
 }
 
+/**
+ * 执行卡密生成
+ * 验证应用 ID 必填后，调用批量生成 API
+ */
 async function handleGenerate() {
   if (!genForm.appid) {
     ElMessage.warning('请输入应用 ID')
@@ -229,6 +303,10 @@ async function handleGenerate() {
   }
 }
 
+/**
+ * 切换卡密启用/禁用状态
+ * @param {Object} row - 卡密行数据
+ */
 async function handleToggle(row) {
   const res = await toggleKm(row.id, row.state === 'y' ? 'n' : 'y')
   if (res.code === 200) {
@@ -239,6 +317,10 @@ async function handleToggle(row) {
   }
 }
 
+/**
+ * 解绑卡密与设备的绑定关系（带二次确认）
+ * @param {Object} row - 卡密行数据
+ */
 async function handleUnbind(row) {
   await ElMessageBox.confirm('确定解绑该卡密？', '确认', { type: 'warning' })
   const res = await unbindKm(row.id)
@@ -250,12 +332,18 @@ async function handleUnbind(row) {
   }
 }
 
+/**
+ * 删除卡密（带二次确认）
+ * @param {Object} row - 卡密行数据
+ */
 async function handleDelete(row) {
   await ElMessageBox.confirm('确定删除该卡密？', '确认删除', { type: 'warning' })
   const res = await deleteKm(row.id)
   if (res.code === 200) {
     ElMessage.success('删除成功')
     loadData()
+  } else {
+    ElMessage.error(res.msg || '删除失败')
   }
 }
 </script>

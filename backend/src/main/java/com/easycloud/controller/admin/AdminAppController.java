@@ -6,9 +6,13 @@ import com.easycloud.common.Result;
 import com.easycloud.entity.App;
 import com.easycloud.entity.AppFile;
 import com.easycloud.entity.AppKm;
+import com.easycloud.entity.AppUser;
+import com.easycloud.entity.UserJk;
 import com.easycloud.mapper.AppFileMapper;
 import com.easycloud.mapper.AppKmMapper;
 import com.easycloud.mapper.AppMapper;
+import com.easycloud.mapper.AppUserMapper;
+import com.easycloud.mapper.UserJkMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,7 +29,20 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 应用管理 - 对应 PHP admin/applist.php, appedit.php
+ * 应用管理控制器
+ * <p>
+ * 提供应用的增删改查、配置更新、图标上传、状态切换等管理功能。
+ * 对应原 PHP 项目中多个管理页面的功能：
+ * <ul>
+ *   <li>applist.php - 应用列表</li>
+ *   <li>appedit.php - 应用编辑</li>
+ *   <li>addapp.php - 应用添加</li>
+ *   <li>appkmlist.php - 卡密管理（部分）</li>
+ * </ul>
+ * 删除应用时会级联删除关联的卡密、文件、用户绑定等数据。
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 @Slf4j
 @RestController
@@ -39,6 +56,8 @@ public class AdminAppController {
     private final AppMapper appMapper;
     private final AppKmMapper appKmMapper;
     private final AppFileMapper appFileMapper;
+    private final AppUserMapper appUserMapper;
+    private final UserJkMapper userJkMapper;
 
     /**
      * 应用列表
@@ -92,6 +111,7 @@ public class AdminAppController {
             app.setAppkey(generateAppKey());
         }
         appMapper.insert(app);
+        log.info("创建应用: id={}, name={}", app.getId(), app.getName());
         return Result.ok("创建成功", app);
     }
 
@@ -112,6 +132,7 @@ public class AdminAppController {
         }
         app.setId(id);
         appMapper.updateById(app);
+        log.info("更新应用: id={}", id);
         return Result.ok("更新成功");
     }
 
@@ -188,10 +209,13 @@ public class AdminAppController {
     @DeleteMapping("/{id}")
     @Transactional
     public Result<?> delete(@PathVariable Long id) {
-        // PHP appdel: 级联删除 yixi_appkm, yixi_appfile
+        // PHP appdel: 级联删除 yixi_appkm, yixi_appfile, yixi_appuser, yixi_userjk
         appKmMapper.delete(new LambdaQueryWrapper<AppKm>().eq(AppKm::getAppid, id));
         appFileMapper.delete(new LambdaQueryWrapper<AppFile>().eq(AppFile::getAppid, id));
+        appUserMapper.delete(new LambdaQueryWrapper<AppUser>().eq(AppUser::getAppid, id));
+        userJkMapper.delete(new LambdaQueryWrapper<UserJk>().eq(UserJk::getAppid, id));
         appMapper.deleteById(id);
+        log.info("删除应用(级联): id={}", id);
         return Result.ok("删除成功");
     }
 
@@ -239,7 +263,7 @@ public class AdminAppController {
             return Result.ok("上传成功", data);
         } catch (IOException e) {
             log.error("文件上传失败", e);
-            return Result.fail("上传失败: " + e.getMessage());
+            return Result.fail("文件上传失败，请稍后重试");
         }
     }
 
@@ -313,6 +337,7 @@ public class AdminAppController {
      * 批量操作
      */
     @PostMapping("/batch")
+    @Transactional
     public Result<?> batch(@RequestBody Map<String, Object> body) {
         String action = (String) body.get("action");
         @SuppressWarnings("unchecked")
@@ -337,6 +362,11 @@ public class AdminAppController {
                     appMapper.updateById(app);
                     break;
                 case "delete":
+                    // 级联删除关联数据（与单个删除逻辑一致）
+                    appKmMapper.delete(new LambdaQueryWrapper<AppKm>().eq(AppKm::getAppid, id));
+                    appFileMapper.delete(new LambdaQueryWrapper<AppFile>().eq(AppFile::getAppid, id));
+                    appUserMapper.delete(new LambdaQueryWrapper<AppUser>().eq(AppUser::getAppid, id));
+                    userJkMapper.delete(new LambdaQueryWrapper<UserJk>().eq(UserJk::getAppid, id));
                     appMapper.deleteById(id);
                     break;
             }

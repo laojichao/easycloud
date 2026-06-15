@@ -109,20 +109,68 @@
 </template>
 
 <script setup>
+/**
+ * 应用管理页面
+ *
+ * 功能：
+ * - 展示应用列表（分页、ID/名称/版本/状态/模式/调用次数/操作列）
+ * - 新建/编辑应用（对话框表单：名称、版本、版本信息、公告、更新地址、加密类型、密钥）
+ * - 切换应用状态（启用/停止）
+ * - 删除应用（二次确认）
+ *
+ * CRUD 流程：
+ * - 列表加载：onMounted -> loadData() -> GET /api/admin/app/list
+ * - 新建：showDialog(null) -> 清空表单 -> handleSave() -> POST /api/admin/app
+ * - 编辑：showDialog(row) -> 填充表单 -> handleSave() -> PUT /api/admin/app/{id}
+ * - 切换状态：handleToggle() -> POST /api/admin/app/{id}/toggle
+ * - 删除：handleDelete() -> 二次确认 -> DELETE /api/admin/app/{id}
+ *
+ * 表格列配置：
+ * - ID（70px）、应用名称（min 150px）、版本（100px）、状态（90px）
+ * - 模式（80px，付费/免费）、调用次数（100px）、操作（260px，固定右侧）
+ */
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getAppList, createApp, updateApp, deleteApp, toggleApp } from '@/api/admin'
 
+/** 应用列表数据 */
 const list = ref([])
+
+/** 列表总条数 */
 const total = ref(0)
+
+/** 当前页码 */
 const currentPage = ref(1)
+
+/** 每页条数 */
 const pageSize = ref(20)
+
+/** 列表加载状态 */
 const loading = ref(false)
+
+/** 新建/编辑对话框是否可见 */
 const dialogVisible = ref(false)
+
+/** 保存按钮加载状态 */
 const saving = ref(false)
+
+/**
+ * 当前编辑的应用 ID
+ * null 表示新建模式，非 null 表示编辑模式
+ */
 const editId = ref(null)
 
+/**
+ * 应用表单数据（新建/编辑共用）
+ * @property {string} name - 应用名称
+ * @property {string} version - 版本号（如 1.0.0）
+ * @property {string} versionInfo - 版本更新说明
+ * @property {string} appGg - 应用公告内容
+ * @property {string} appUpdateUrl - 应用更新下载地址
+ * @property {number} miType - 加密类型（0明文/1RC4-GBK/2Base64/3RC4原始/4AES-128-CBC）
+ * @property {string} rc4Key - 加密密钥（miType 为 1/3/4 时需要）
+ */
 const form = reactive({
   name: '',
   version: '',
@@ -133,9 +181,15 @@ const form = reactive({
   rc4Key: ''
 })
 
+/** 页面挂载时加载应用列表 */
 onMounted(() => loadData())
 
+/**
+ * 加载应用列表数据
+ * 从后端获取分页数据并更新 list 和 total
+ */
 async function loadData() {
+  if (loading.value) return
   loading.value = true
   try {
     const res = await getAppList({ page: currentPage.value, size: pageSize.value })
@@ -148,8 +202,13 @@ async function loadData() {
   }
 }
 
+/**
+ * 显示新建/编辑对话框
+ * @param {Object|null} row - 传入行数据为编辑模式，传入 null 为新建模式
+ */
 function showDialog(row) {
   if (row) {
+    // 编辑模式：用行数据填充表单
     editId.value = row.id
     Object.assign(form, {
       name: row.name || '',
@@ -161,6 +220,7 @@ function showDialog(row) {
       rc4Key: row.rc4Key || ''
     })
   } else {
+    // 新建模式：清空表单
     editId.value = null
     Object.assign(form, {
       name: '', version: '', versionInfo: '', appGg: '',
@@ -170,6 +230,10 @@ function showDialog(row) {
   dialogVisible.value = true
 }
 
+/**
+ * 保存应用（新建或更新）
+ * 根据 editId 判断调用 createApp 或 updateApp
+ */
 async function handleSave() {
   saving.value = true
   try {
@@ -188,6 +252,12 @@ async function handleSave() {
   }
 }
 
+/**
+ * 切换应用字段状态
+ * @param {Object} row - 应用行数据
+ * @param {string} field - 要切换的字段（如 'active'）
+ * @param {*} value - 目标值（如 'y'/'n'）
+ */
 async function handleToggle(row, field, value) {
   const res = await toggleApp(row.id, field, value)
   if (res.code === 200) {
@@ -198,6 +268,10 @@ async function handleToggle(row, field, value) {
   }
 }
 
+/**
+ * 删除应用（带二次确认）
+ * @param {Object} row - 要删除的应用行数据
+ */
 async function handleDelete(row) {
   await ElMessageBox.confirm('确定删除该应用？此操作不可恢复。', '确认删除', {
     type: 'warning',
@@ -208,6 +282,8 @@ async function handleDelete(row) {
   if (res.code === 200) {
     ElMessage.success('删除成功')
     loadData()
+  } else {
+    ElMessage.error(res.msg || '删除失败')
   }
 }
 </script>

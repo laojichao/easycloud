@@ -88,6 +88,23 @@
 </template>
 
 <script setup>
+/**
+ * 首页（Landing Page）
+ *
+ * 页面结构：
+ * 1. 顶部导航栏：Logo、首页链接、API 文档链接、管理后台入口
+ * 2. Hero 区域：产品标语、简介、行动按钮（查看文档/进入控制台）
+ * 3. 特性展示：四张功能卡片（卡密验证、数据加密、设备绑定、高性能 API）
+ * 4. 技术栈展示：六项核心技术（Spring Boot 3、MyBatis-Plus、Vue 3 等）
+ * 5. 页脚：版权信息
+ *
+ * 所有数据均为静态配置，无需调用后端 API
+ */
+
+/**
+ * 产品特性列表
+ * @type {Array<{symbol: string, title: string, desc: string, color: string, glowBg: string}>}
+ */
 const features = [
   {
     symbol: '⚿',
@@ -119,6 +136,10 @@ const features = [
   }
 ]
 
+/**
+ * 技术栈列表
+ * @type {Array<{name: string, desc: string}>}
+ */
 const techStack = [
   { name: 'Spring Boot 3', desc: '后端框架' },
   { name: 'MyBatis-Plus', desc: 'ORM 持久层' },

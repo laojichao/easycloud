@@ -9,6 +9,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+/**
+ * 管理员认证拦截器
+ * <p>
+ * 拦截所有 /api/admin/** 请求（排除 /api/admin/login），验证 JWT Token 的有效性。
+ * 验证通过后将管理员用户名注入请求属性 "adminUser"，供下游 Controller 使用。
+ * <p>
+ * Token 格式：Authorization: Bearer {token}
+ * Token 的 subject 字段存储管理员用户名。
+ *
+ * @author EasyCloud
+ * @since 1.0.0
+ */
 @Component
 @RequiredArgsConstructor
 public class AdminAuthInterceptor implements HandlerInterceptor {

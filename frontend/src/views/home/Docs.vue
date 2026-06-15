@@ -63,6 +63,35 @@
 </template>
 
 <script setup>
+/**
+ * API 文档页面
+ *
+ * 展示 EasyCloud 验证系统对外提供的 API 接口文档。
+ * 所有接口通过统一入口 /api/legacy?app={appid}&api={apiName} 访问。
+ *
+ * 页面结构：
+ * - 顶部导航栏（Logo、首页链接、API 文档高亮、管理后台入口）
+ * - 文档标题和说明
+ * - API 卡片列表，每个卡片包含：
+ *   - 请求方法（POST）和路径
+ *   - 接口说明
+ *   - 请求参数表格（参数名、类型、必填、说明）
+ *   - 返回示例（JSON 格式）
+ *
+ * 包含的 API 接口：
+ * - ini：获取应用配置（版本、更新信息）
+ * - notice：获取应用公告
+ * - getfile：获取文件列表
+ * - kmlogon：卡密登录验证（时长卡/次数卡）
+ * - kmunmachine：卡密解绑
+ *
+ * 所有数据为静态配置，无需调用后端 API
+ */
+
+/**
+ * API 接口列表配置
+ * @type {Array<{name: string, title: string, desc: string, params: Array, response: string}>}
+ */
 const apiList = [
   {
     name: 'ini',

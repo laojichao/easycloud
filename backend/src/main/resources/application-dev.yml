@@ -21,3 +21,10 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto
+
+# 开发环境日志级别
+logging:
+  level:
+    root: INFO
+    com.easycloud: DEBUG
+    org.springframework.web: INFO

@@ -87,21 +87,40 @@
 </template>
 
 <script setup>
+/**
+ * 管理后台仪表盘页面
+ *
+ * 功能：
+ * - 展示系统统计数据卡片（应用总数、卡密总数、今日新增卡密、文件总数、今日日志）
+ * - 快速操作入口（跳转到应用管理、卡密管理、文件管理、系统设置）
+ * - 系统信息展示（后端框架、前端框架、数据库、缓存、认证方式、API 文档）
+ *
+ * 数据来源：页面加载时调用 GET /api/admin/stats 获取统计数据
+ */
 import { ref, computed, onMounted } from 'vue'
 import { getStats } from '@/api/admin'
-import { Grid, Key, Folder, Setting, DataAnalysis } from '@element-plus/icons-vue'
+import { Grid, Key, Folder, Setting, DataAnalysis, TrendCharts } from '@element-plus/icons-vue'
 
+/**
+ * 系统统计数据（从后端 API 获取）
+ * @type {Ref<Object>}
+ */
 const stats = ref({
-  appCount: 0,
-  kmCount: 0,
-  fileCount: 0,
-  todayApps: 0,
-  todayKm: 0,
-  todayLogs: 0,
-  kmUsed: 0,
-  kmUnused: 0
+  appCount: 0,    // 应用总数
+  kmCount: 0,     // 卡密总数
+  fileCount: 0,   // 文件总数
+  todayApps: 0,   // 今日新增应用
+  todayKm: 0,     // 今日新增卡密
+  todayLogs: 0,   // 今日日志数
+  kmUsed: 0,      // 已使用卡密数
+  kmUnused: 0     // 未使用卡密数
 })
 
+/**
+ * 统计卡片配置（将原始数据转换为卡片展示格式）
+ * 每张卡片包含：标签、数值、图标、图标背景色、图标颜色、光晕色
+ * @type {ComputedRef<Array>}
+ */
 const statsCards = computed(() => [
   {
     label: '应用总数',
@@ -120,12 +139,12 @@ const statsCards = computed(() => [
     glowColor: 'rgba(255, 45, 120, 0.05)'
   },
   {
-    label: '文件总数',
-    value: stats.value.fileCount,
-    icon: 'Folder',
-    iconBg: 'rgba(139, 92, 246, 0.1)',
-    iconColor: '#8b5cf6',
-    glowColor: 'rgba(139, 92, 246, 0.05)'
+    label: '今日新增卡密',
+    value: stats.value.todayKm,
+    icon: 'TrendCharts',
+    iconBg: 'rgba(16, 185, 129, 0.1)',
+    iconColor: '#10b981',
+    glowColor: 'rgba(16, 185, 129, 0.05)'
   },
   {
     label: '文件总数',
@@ -145,6 +164,7 @@ const statsCards = computed(() => [
   }
 ])
 
+/** 页面挂载时加载统计数据 */
 onMounted(async () => {
   try {
     const res = await getStats()
@@ -164,7 +184,7 @@ onMounted(async () => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 32px;
 }

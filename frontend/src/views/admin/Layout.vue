@@ -67,6 +67,22 @@
 </template>
 
 <script setup>
+/**
+ * 管理后台布局组件
+ *
+ * 结构：
+ * - 左侧固定侧边栏（sidebar）：Logo、导航菜单、系统状态指示
+ * - 右侧主内容区（main-area）：顶部栏（页面标题 + 用户信息 + 退出按钮）+ 页面内容
+ *
+ * 侧边栏导航包含 5 个功能模块：
+ * - 仪表盘：数据统计概览
+ * - 应用管理：应用 CRUD 和配置
+ * - 卡密管理：卡密生成和管理
+ * - 文件管理：文件链接管理
+ * - 系统设置：站点配置和维护
+ *
+ * 响应式布局：侧边栏固定定位，主内容区通过 margin-left 避开侧边栏
+ */
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
@@ -75,6 +91,10 @@ import { DataAnalysis, Grid, Key, Folder, Setting, SwitchButton } from '@element
 const route = useRoute()
 const userStore = useUserStore()
 
+/**
+ * 侧边栏导航项配置
+ * @type {Array<{path: string, label: string, icon: string}>}
+ */
 const navItems = [
   { path: '/admin/dashboard', label: '仪表盘', icon: 'DataAnalysis' },
   { path: '/admin/apps', label: '应用管理', icon: 'Grid' },
@@ -83,11 +103,19 @@ const navItems = [
   { path: '/admin/settings', label: '系统设置', icon: 'Setting' },
 ]
 
+/**
+ * 当前页面标题（根据路由路径匹配导航项）
+ * @type {ComputedRef<string>}
+ */
 const currentPageTitle = computed(() => {
   const item = navItems.find(n => route.path.startsWith(n.path))
   return item?.label || '管理后台'
 })
 
+/**
+ * 管理员登出
+ * 清除 token 并跳转到管理员登录页
+ */
 function handleLogout() {
   userStore.logout()
 }

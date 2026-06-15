@@ -1,14 +1,25 @@
 package com.easycloud.common;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Set;
 
 
 /**
- * API 签名工具类 - 精确复刻 PHP Arr_sign()
+ * API 签名工具类
+ * <p>
+ * 精确复刻原 PHP 项目的签名验证逻辑（Arr_sign() 函数）。
+ * 签名算法流程：
+ * <ol>
+ *   <li>排除指定字段（sign、app、api 等非业务字段）</li>
+ *   <li>按原始顺序拼接所有参数为 key=value&amp; 格式</li>
+ *   <li>在末尾追加 appkey</li>
+ *   <li>计算 MD5 摘要（小写32位）</li>
+ * </ol>
+ * <p>
+ * 对应原 PHP 文件: includes/global.php 中的 Arr_sign() 函数
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 public class ApiSignature {
 
@@ -62,7 +73,7 @@ public class ApiSignature {
         String signStr = sb.toString();
 
         if (md5) {
-            return md5(signStr);
+            return Md5Util.md5(signStr);
         } else {
             return signStr;
         }
@@ -94,27 +105,6 @@ public class ApiSignature {
      */
     public static String responseCheck(long time, String appkey, String value) {
         String raw = time + appkey + (value != null ? value : "");
-        return md5(raw);
-    }
-
-    /**
-     * MD5 摘要 - 小写32位
-     *
-     * @param input 输入字符串
-     * @return MD5 摘要(小写)
-     */
-    private static String md5(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(32);
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b & 0xFF));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            // MD5 is always available in Java
-            throw new RuntimeException("MD5 not available", e);
-        }
+        return Md5Util.md5(raw);
     }
 }

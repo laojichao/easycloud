@@ -18,7 +18,31 @@ import java.time.Instant;
 import java.util.*;
 
 /**
- * API 路由入口 - 精确复刻 PHP api.php + api/app.php
+ * API 路由入口控制器
+ * <p>
+ * 精确复刻原 PHP 项目 api.php + api/app.php 的完整 API 兼容层。
+ * 所有客户端 API 请求统一经过此控制器处理，支持以下安全机制：
+ * <ul>
+ *   <li>数据加密/解密（RC4、AES、Base64 等 6 种类型）</li>
+ *   <li>请求签名验证（MD5 签名算法）</li>
+ *   <li>时间漂移检查（防重放攻击）</li>
+ *   <li>输入参数净化（XSS、SQL 注入防护）</li>
+ * </ul>
+ * <p>
+ * API 兼容层设计思路：
+ * <ol>
+ *   <li>客户端请求统一到达 /api/legacy 端点</li>
+ *   <li>根据 app 参数加载应用配置</li>
+ *   <li>白名单接口（ini、notice、getfile）直接处理，无需加密验签</li>
+ *   <li>非白名单接口按 miState/miType 配置进行解密、验签、时间校验</li>
+ *   <li>根据 api 参数路由到具体 Handler 处理业务逻辑</li>
+ *   <li>响应数据按 miType 配置加密后返回</li>
+ * </ol>
+ * <p>
+ * 对应原 PHP 文件: api.php（入口）、api/app.php（路由）
+ *
+ * @author EasyCloud
+ * @since 1.0.0
  */
 @Slf4j
 @RestController

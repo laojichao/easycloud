@@ -16,20 +16,21 @@
         <p class="subtitle">授权验证系统</p>
       </div>
 
-      <el-form :model="form" label-width="0" size="large">
+      <el-form :model="form" label-width="0" size="large" @submit.prevent="handleLogin">
         <el-form-item>
           <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" />
         </el-form-item>
         <el-form-item>
-          <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password />
+          <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password @keyup.enter="handleLogin" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" class="login-btn" disabled>登 录（暂未开放）</el-button>
+          <el-button type="primary" class="login-btn" :loading="loading" @click="handleLogin">登 录</el-button>
         </el-form-item>
       </el-form>
 
       <div class="card-footer">
         <router-link to="/" class="footer-link">返回首页</router-link>
+        <router-link to="/register" class="footer-link">注册账号</router-link>
         <router-link to="/admin/login" class="footer-link">管理后台</router-link>
       </div>
     </div>
@@ -37,12 +38,69 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+/**
+ * 用户登录页面
+ *
+ * 登录流程：
+ * 1. 用户输入用户名和密码
+ * 2. 前端验证用户名和密码非空（简单校验，未使用 el-form rules）
+ * 3. 调用 userStore.userLogin() 发送用户登录请求
+ * 4. 成功后存储 user_token，跳转到用户中心 /user
+ * 5. 失败则显示错误提示
+ *
+ * 与管理员登录的区别：
+ * - 使用 user_token 而非 admin_token
+ * - 登录成功后跳转到 /user 而非 /admin/dashboard
+ * - 使用 userLoginApi 而非 adminLogin
+ *
+ * 对应后端端点：POST /api/user/login
+ */
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
+const router = useRouter()
+const userStore = useUserStore()
+
+/** 登录按钮加载状态 */
+const loading = ref(false)
+
+/** 登录表单数据 */
 const form = reactive({
   username: '',
   password: ''
 })
+
+/**
+ * 处理用户登录
+ * 手动校验非空 -> 调用 store 登录 -> 成功跳转用户中心 / 失败提示错误
+ */
+async function handleLogin() {
+  if (!form.username.trim()) {
+    ElMessage.warning('请输入用户名')
+    return
+  }
+  if (!form.password) {
+    ElMessage.warning('请输入密码')
+    return
+  }
+
+  loading.value = true
+  try {
+    const res = await userStore.userLogin(form.username, form.password)
+    if (res.code === 200) {
+      ElMessage.success('登录成功')
+      router.push('/user')
+    } else {
+      ElMessage.error(res.msg || '登录失败')
+    }
+  } catch (e) {
+    ElMessage.error(e.message || '登录失败，请检查网络')
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style scoped lang="scss">
