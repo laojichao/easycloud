@@ -257,8 +257,8 @@ public class AdminKmController {
             return Result.fail("参数不完整");
         }
 
-        // export 不需要 ids
-        if ("export".equals(action)) {
+        // export/export_all 不需要 ids
+        if ("export".equals(action) || "export_all".equals(action)) {
             return handleExport(body);
         }
 

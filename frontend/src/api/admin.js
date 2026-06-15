@@ -505,11 +505,12 @@ export function userPointList(params) {
 }
 
 /**
- * 申请提现（使用积分兑换现金）
+ * 申请提现（使用余额兑换现金）
  * @param {Object} data - 提现信息
- * @param {number} data.amount - 提现金额
+ * @param {number} data.money - 提现金额
  * @param {string} data.account - 收款账号（支付宝/微信）
- * @param {string} [data.remark] - 备注
+ * @param {string} [data.name] - 收款人姓名
+ * @param {string} [data.type] - 提现类型（如 alipay）
  * @returns {Promise<Object>} 申请结果
  * @endpoint POST /api/user/tixian
  */
@@ -527,4 +528,182 @@ export function applyTixian(data) {
  */
 export function userTixianList(params) {
   return request.get('/api/user/tixian/list', { params })
+}
+
+// ==================== 用户管理（管理员） ====================
+
+/**
+ * 获取用户列表（分页）
+ * @param {Object} params - 查询参数
+ * @param {number} [params.page] - 页码
+ * @param {number} [params.size] - 每页条数
+ * @param {string} [params.keyword] - 搜索关键词
+ * @returns {Promise<Object>} 返回 { code, data: { records, total } }
+ * @endpoint GET /api/admin/users
+ */
+export function getUserList(params) {
+  return request.get('/api/admin/users', { params })
+}
+
+/**
+ * 获取单个用户详情
+ * @param {number|string} uid - 用户 UID
+ * @returns {Promise<Object>} 用户详情
+ * @endpoint GET /api/admin/users/{uid}
+ */
+export function getUser(uid) {
+  return request.get(`/api/admin/users/${uid}`)
+}
+
+/**
+ * 创建用户
+ * @param {Object} data - 用户数据
+ * @param {string} data.user - 用户名
+ * @param {string} data.pwd - 密码
+ * @param {string} [data.qq] - QQ号
+ * @param {string} [data.email] - 邮箱
+ * @returns {Promise<Object>} 创建结果
+ * @endpoint POST /api/admin/users
+ */
+export function createUser(data) {
+  return request.post('/api/admin/users', data)
+}
+
+/**
+ * 更新用户信息
+ * @param {number|string} uid - 用户 UID
+ * @param {Object} data - 更新数据
+ * @returns {Promise<Object>} 更新结果
+ * @endpoint PUT /api/admin/users/{uid}
+ */
+export function updateUser(uid, data) {
+  return request.put(`/api/admin/users/${uid}`, data)
+}
+
+/**
+ * 删除用户
+ * @param {number|string} uid - 用户 UID
+ * @returns {Promise<Object>} 删除结果
+ * @endpoint DELETE /api/admin/users/{uid}
+ */
+export function deleteUser(uid) {
+  return request.delete(`/api/admin/users/${uid}`)
+}
+
+/**
+ * 调整用户余额
+ * @param {number|string} uid - 用户 UID
+ * @param {Object} data - 包含 amount（正数增加，负数减少）
+ * @returns {Promise<Object>} 操作结果
+ * @endpoint POST /api/admin/users/{uid}/rmb
+ */
+export function adjustUserRmb(uid, data) {
+  return request.post(`/api/admin/users/${uid}/rmb`, data)
+}
+
+// ==================== 工单管理（管理员） ====================
+
+/**
+ * 获取工单列表（支持状态筛选）
+ * @param {Object} params - 查询参数
+ * @param {number} [params.page] - 页码
+ * @param {number} [params.size] - 每页条数
+ * @param {number} [params.status] - 状态筛选（0待处理/1已处理/2已关闭）
+ * @returns {Promise<Object>} 返回 { code, data: { records, total } }
+ * @endpoint GET /api/admin/workorders
+ */
+export function getAdminWorkOrderList(params) {
+  return request.get('/api/admin/workorders', { params })
+}
+
+/**
+ * 回复工单
+ * @param {number|string} id - 工单 ID
+ * @param {Object} data - 包含 reply（回复内容）
+ * @returns {Promise<Object>} 操作结果
+ * @endpoint POST /api/admin/workorders/{id}/reply
+ */
+export function replyWorkOrder(id, data) {
+  return request.post(`/api/admin/workorders/${id}/reply`, data)
+}
+
+/**
+ * 关闭工单
+ * @param {number|string} id - 工单 ID
+ * @returns {Promise<Object>} 操作结果
+ * @endpoint POST /api/admin/workorders/{id}/close
+ */
+export function closeWorkOrder(id) {
+  return request.post(`/api/admin/workorders/${id}/close`)
+}
+
+// ==================== 提现管理（管理员） ====================
+
+/**
+ * 获取提现列表（支持状态筛选）
+ * @param {Object} params - 查询参数
+ * @param {number} [params.page] - 页码
+ * @param {number} [params.size] - 每页条数
+ * @param {number} [params.status] - 状态筛选（0待处理/1已处理/2已拒绝）
+ * @returns {Promise<Object>} 返回 { code, data: { records, total } }
+ * @endpoint GET /api/admin/tixian
+ */
+export function getAdminTixianList(params) {
+  return request.get('/api/admin/tixian', { params })
+}
+
+/**
+ * 批准提现
+ * @param {number|string} id - 提现 ID
+ * @param {Object} data - 包含 realmoney（实际到账金额）
+ * @returns {Promise<Object>} 操作结果
+ * @endpoint POST /api/admin/tixian/{id}/approve
+ */
+export function approveTixian(id, data) {
+  return request.post(`/api/admin/tixian/${id}/approve`, data)
+}
+
+/**
+ * 拒绝提现
+ * @param {number|string} id - 提现 ID
+ * @returns {Promise<Object>} 操作结果（余额自动退回）
+ * @endpoint POST /api/admin/tixian/{id}/reject
+ */
+export function rejectTixian(id) {
+  return request.post(`/api/admin/tixian/${id}/reject`)
+}
+
+// ==================== 支付订单管理（管理员） ====================
+
+/**
+ * 获取支付订单列表
+ * @param {Object} params - 查询参数
+ * @param {number} [params.page] - 页码
+ * @param {number} [params.size] - 每页条数
+ * @param {string} [params.status] - 状态筛选（pending/paid/failed/refunded）
+ * @returns {Promise<Object>} 返回 { code, data: { records, total } }
+ * @endpoint GET /api/admin/pay/orders
+ */
+export function getPayOrderList(params) {
+  return request.get('/api/admin/pay/orders', { params })
+}
+
+/**
+ * 获取订单详情
+ * @param {string} orderNo - 订单号
+ * @returns {Promise<Object>} 订单详情
+ * @endpoint GET /api/admin/pay/orders/{orderNo}
+ */
+export function getPayOrderDetail(orderNo) {
+  return request.get(`/api/admin/pay/orders/${orderNo}`)
+}
+
+/**
+ * 订单退款
+ * @param {string} orderNo - 订单号
+ * @returns {Promise<Object>} 退款结果
+ * @endpoint POST /api/admin/pay/refund/{orderNo}
+ */
+export function refundPayOrder(orderNo) {
+  return request.post(`/api/admin/pay/refund/${orderNo}`)
 }

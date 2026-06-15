@@ -86,7 +86,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { DataAnalysis, Grid, Key, Folder, Setting, SwitchButton } from '@element-plus/icons-vue'
+import { DataAnalysis, Grid, Key, Folder, Setting, SwitchButton, User, Ticket, Wallet, CreditCard } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -100,6 +100,10 @@ const navItems = [
   { path: '/admin/apps', label: '应用管理', icon: 'Grid' },
   { path: '/admin/km', label: '卡密管理', icon: 'Key' },
   { path: '/admin/files', label: '文件管理', icon: 'Folder' },
+  { path: '/admin/users', label: '用户管理', icon: 'User' },
+  { path: '/admin/workorders', label: '工单管理', icon: 'Ticket' },
+  { path: '/admin/tixian', label: '提现审核', icon: 'Wallet' },
+  { path: '/admin/payorders', label: '支付订单', icon: 'CreditCard' },
   { path: '/admin/settings', label: '系统设置', icon: 'Setting' },
 ]
 

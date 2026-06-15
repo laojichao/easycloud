@@ -103,6 +103,34 @@ const routes = [
         component: () => import('../views/admin/Files.vue')
       },
 
+      /** 用户管理：注册用户增删改查、余额调整 */
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: () => import('../views/admin/Users.vue')
+      },
+
+      /** 工单管理：查看、回复工单 */
+      {
+        path: 'workorders',
+        name: 'AdminWorkOrders',
+        component: () => import('../views/admin/WorkOrders.vue')
+      },
+
+      /** 提现审核：审核用户提现申请 */
+      {
+        path: 'tixian',
+        name: 'AdminTixian',
+        component: () => import('../views/admin/Tixian.vue')
+      },
+
+      /** 支付订单：查看订单、退款 */
+      {
+        path: 'payorders',
+        name: 'AdminPayOrders',
+        component: () => import('../views/admin/PayOrders.vue')
+      },
+
       /** 系统设置：站点配置、密码修改、缓存维护 */
       {
         path: 'settings',

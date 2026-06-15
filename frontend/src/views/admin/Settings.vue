@@ -285,7 +285,7 @@ async function handleDbOptim() {
     await ElMessageBox.confirm('确定优化数据库？此操作可能需要一些时间。', '确认操作', { type: 'warning', confirmButtonText: '执行', cancelButtonText: '取消' })
   } catch { return }
   try {
-    const res = await request.post('/api/admin/setting/db-optim')
+    const res = await request.post('/api/admin/setting/db-optim', [])
     if (res.code === 200) ElMessage.success('数据库优化完成')
     else ElMessage.error(res.msg || '操作失败')
   } catch { ElMessage.error('操作失败') }
@@ -296,7 +296,7 @@ async function handleDbRepair() {
     await ElMessageBox.confirm('确定修复数据库？此操作将对所有表执行 REPAIR TABLE。', '确认操作', { type: 'warning', confirmButtonText: '执行', cancelButtonText: '取消' })
   } catch { return }
   try {
-    const res = await request.post('/api/admin/setting/db-repair')
+    const res = await request.post('/api/admin/setting/db-repair', [])
     if (res.code === 200) ElMessage.success('数据库修复完成')
     else ElMessage.error(res.msg || '操作失败')
   } catch { ElMessage.error('操作失败') }
@@ -304,13 +304,19 @@ async function handleDbRepair() {
 
 async function handleMailTest() {
   try {
-    await ElMessageBox.confirm('确定发送测试邮件？', '确认操作', { type: 'info', confirmButtonText: '发送', cancelButtonText: '取消' })
-  } catch { return }
-  try {
-    const res = await request.post('/api/admin/setting/mail-test')
+    const { value: to } = await ElMessageBox.prompt('请输入测试收件人邮箱', '邮件测试', {
+      confirmButtonText: '发送',
+      cancelButtonText: '取消',
+      inputPlaceholder: 'test@example.com',
+      inputPattern: /^.+@.+$/,
+      inputErrorMessage: '请输入正确的邮箱地址'
+    })
+    const res = await request.post('/api/admin/setting/mail-test', { to })
     if (res.code === 200) ElMessage.success('测试邮件已发送')
     else ElMessage.error(res.msg || '发送失败')
-  } catch { ElMessage.error('发送失败') }
+  } catch (e) {
+    if (e !== 'cancel' && e?.message !== 'cancel') ElMessage.error('发送失败')
+  }
 }
 </script>
 

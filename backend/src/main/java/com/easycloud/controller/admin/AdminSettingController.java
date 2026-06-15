@@ -248,9 +248,9 @@ public class AdminSettingController {
      * @return 操作结果
      */
     @PostMapping("/db-optim")
-    public Result<?> dbOptim(@RequestBody List<String> tables) {
+    public Result<?> dbOptim(@RequestBody(required = false) List<String> tables) {
         if (tables == null || tables.isEmpty()) {
-            return Result.fail("请指定要优化的表");
+            tables = new ArrayList<>(ALLOWED_TABLES);
         }
 
         StringBuilder failedTables = new StringBuilder();
@@ -283,9 +283,9 @@ public class AdminSettingController {
      * @return 操作结果
      */
     @PostMapping("/db-repair")
-    public Result<?> dbRepair(@RequestBody List<String> tables) {
+    public Result<?> dbRepair(@RequestBody(required = false) List<String> tables) {
         if (tables == null || tables.isEmpty()) {
-            return Result.fail("请指定要修复的表");
+            tables = new ArrayList<>(ALLOWED_TABLES);
         }
 
         StringBuilder failedTables = new StringBuilder();
