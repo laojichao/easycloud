@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS yixi_apps (
   total VARCHAR(32) DEFAULT '0',
   date TIMESTAMP NOT NULL
 );
+-- PHP schema: UNIQUE KEY `key` (appkey)
+CREATE UNIQUE INDEX IF NOT EXISTS uk_apps_appkey ON yixi_apps(appkey);
 
 CREATE TABLE IF NOT EXISTS yixi_config (
   k VARCHAR(32) PRIMARY KEY,
@@ -221,13 +223,41 @@ CREATE TABLE IF NOT EXISTS yixi_user (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uk_yixi_user ON yixi_user(user);
 
--- Default admin config
+-- Default admin config (matching PHP install/simple.sql)
 MERGE INTO yixi_config (k, v) VALUES ('admin_user', 'admin');
 MERGE INTO yixi_config (k, v) VALUES ('admin_pwd', '123456');
 MERGE INTO yixi_config (k, v) VALUES ('sitename', '极简云验证');
 MERGE INTO yixi_config (k, v) VALUES ('kfqq', '123456');
 MERGE INTO yixi_config (k, v) VALUES ('template', 'default');
 MERGE INTO yixi_config (k, v) VALUES ('checkin_reward', '0.1');
+MERGE INTO yixi_config (k, v) VALUES ('access_token', '');
+MERGE INTO yixi_config (k, v) VALUES ('adminlogin', '');
+MERGE INTO yixi_config (k, v) VALUES ('admin_login_open', '1');
+MERGE INTO yixi_config (k, v) VALUES ('admin_qq', '');
+MERGE INTO yixi_config (k, v) VALUES ('admin_qqloginsm_open', '1');
+MERGE INTO yixi_config (k, v) VALUES ('admin_qqlogin_open', '0');
+MERGE INTO yixi_config (k, v) VALUES ('admin_remote_login_open', '1');
+MERGE INTO yixi_config (k, v) VALUES ('admin_send_type', '0');
+MERGE INTO yixi_config (k, v) VALUES ('defendid', '3');
+MERGE INTO yixi_config (k, v) VALUES ('description', '极简云验证提供应用管理，API数据接口调用服务平台');
+MERGE INTO yixi_config (k, v) VALUES ('email', '');
+MERGE INTO yixi_config (k, v) VALUES ('email_temp', '1');
+MERGE INTO yixi_config (k, v) VALUES ('footer', '');
+MERGE INTO yixi_config (k, v) VALUES ('gxqm', '');
+MERGE INTO yixi_config (k, v) VALUES ('icp', '');
+MERGE INTO yixi_config (k, v) VALUES ('index_notice', '');
+MERGE INTO yixi_config (k, v) VALUES ('index_open', '1');
+MERGE INTO yixi_config (k, v) VALUES ('invite_money', '1');
+MERGE INTO yixi_config (k, v) VALUES ('invite_rebate_open', '0');
+MERGE INTO yixi_config (k, v) VALUES ('invite_time', 'week');
+MERGE INTO yixi_config (k, v) VALUES ('keywords', '极简云验证提供应用管理，API数据接口调用服务平台');
+MERGE INTO yixi_config (k, v) VALUES ('orgname', '');
+MERGE INTO yixi_config (k, v) VALUES ('phone', '');
+MERGE INTO yixi_config (k, v) VALUES ('qunhao', '');
+MERGE INTO yixi_config (k, v) VALUES ('tenpay_api', '2');
+MERGE INTO yixi_config (k, v) VALUES ('title', '不止于此');
+MERGE INTO yixi_config (k, v) VALUES ('ui_background', '3');
+MERGE INTO yixi_config (k, v) VALUES ('version', '2001');
 
 -- 应用用户关联表 - 对应 yixi_appuser
 CREATE TABLE IF NOT EXISTS yixi_appuser (

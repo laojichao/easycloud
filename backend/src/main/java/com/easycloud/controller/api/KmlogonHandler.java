@@ -53,17 +53,17 @@ public class KmlogonHandler {
     private static final int SINGLE_UNLIMITED = 999999999;
 
     @Transactional
-    public Map<String, Object> handle(App app, Map<String, String> dataArr, HttpServletRequest request) {
+    public Map<String, Object> handle(App app, Map<String, String> dataArr, HttpServletRequest request, String value) {
         // 参数校验（PHP: purge($data_arr['kami'])）
         String kami = dataArr.get("kami");
         if (kami == null || kami.trim().isEmpty()) {
-            return ApiController.buildErrorResponse(148, "卡密不能为空", app, null);
+            return ApiController.buildErrorResponse(148, "卡密不能为空", app, value);
         }
         kami = kami.trim();
 
         String markcode = dataArr.get("markcode");
         if (markcode == null || markcode.trim().isEmpty()) {
-            return ApiController.buildErrorResponse(112, "机器码不能为空", app, null);
+            return ApiController.buildErrorResponse(112, "机器码不能为空", app, value);
         }
         markcode = markcode.trim();
 
@@ -74,7 +74,7 @@ public class KmlogonHandler {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("kami", kami);
             data.put("vip", LONG_USE_SENTINEL);
-            return ApiController.buildSuccessResponse(data, app, null);
+            return ApiController.buildSuccessResponse(data, app, value);
         }
 
         // 查询卡密 - PHP 使用 binary kami 做大小写敏感匹配
@@ -86,25 +86,25 @@ public class KmlogonHandler {
         );
 
         if (km == null) {
-            return ApiController.buildErrorResponse(149, "卡密不存在", app, null);
+            return ApiController.buildErrorResponse(149, "卡密不存在", app, value);
         }
 
         // 检查机器码是否匹配
         if (!markcode.equals(km.getUser())) {
             if (km.getUser() != null && !km.getUser().isEmpty() && "y".equals(app.getLogonCheckIn())) {
-                return ApiController.buildErrorResponse(150, "卡密已被使用", app, null);
+                return ApiController.buildErrorResponse(150, "卡密已被使用", app, value);
             }
         }
 
         // 检查卡密状态
         if ("n".equals(km.getState())) {
-            return ApiController.buildErrorResponse(151, "卡密已禁用", app, null);
+            return ApiController.buildErrorResponse(151, "卡密已禁用", app, value);
         }
 
         // IP 验证
         if ("y".equals(app.getIpauth())) {
             if (km.getUserIp() != null && !km.getUserIp().isEmpty() && !km.getUserIp().equals(clientIp)) {
-                return ApiController.buildErrorResponse(169, "IP地址不一致", app, null);
+                return ApiController.buildErrorResponse(169, "IP地址不一致", app, value);
             }
         }
 
@@ -112,24 +112,24 @@ public class KmlogonHandler {
 
         // 时长卡处理
         if ("code".equals(km.getType())) {
-            return handleCodeType(app, km, kami, markcode, clientIp, now);
+            return handleCodeType(app, km, kami, markcode, clientIp, now, value);
         }
 
         // 次数卡处理
         if ("single".equals(km.getType())) {
-            return handleSingleType(app, km, kami, markcode, clientIp, now);
+            return handleSingleType(app, km, kami, markcode, clientIp, now, value);
         }
 
-        return ApiController.buildErrorResponse(201, "未知卡密类型", app, null);
+        return ApiController.buildErrorResponse(201, "未知卡密类型", app, value);
     }
 
     /**
      * 时长卡处理
      */
-    private Map<String, Object> handleCodeType(App app, AppKm km, String kami, String markcode, String clientIp, long now) {
+    private Map<String, Object> handleCodeType(App app, AppKm km, String kami, String markcode, String clientIp, long now, String value) {
         String kmTime = km.getKmTime();
         if (kmTime == null || kmTime.isEmpty()) {
-            return ApiController.buildErrorResponse(201, "卡密时长类型未配置", app, null);
+            return ApiController.buildErrorResponse(201, "卡密时长类型未配置", app, value);
         }
         Long secondsPerUnit = TIME_UNIT_SECONDS.get(kmTime);
 
@@ -149,13 +149,13 @@ public class KmlogonHandler {
 
             boolean success = appKmMapper.updateKmLogin(km.getId(), now, markcode, endTime, clientIp, "y") > 0;
             if (!success) {
-                return ApiController.buildErrorResponse(201, "登录失败，请重试", app, null);
+                return ApiController.buildErrorResponse(201, "登录失败，请重试", app, value);
             }
 
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("kami", kami);
             data.put("vip", endTime);
-            return ApiController.buildSuccessResponse(data, app, null);
+            return ApiController.buildSuccessResponse(data, app, value);
         }
 
         // 已使用过的卡密 - 检查是否到期
@@ -164,7 +164,7 @@ public class KmlogonHandler {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("kami", kami);
             data.put("vip", endTimeStr);
-            return ApiController.buildSuccessResponse(data, app, null);
+            return ApiController.buildSuccessResponse(data, app, value);
         }
 
         try {
@@ -173,24 +173,24 @@ public class KmlogonHandler {
                 Map<String, Object> data = new LinkedHashMap<>();
                 data.put("kami", kami);
                 data.put("vip", endTimeStr);
-                return ApiController.buildSuccessResponse(data, app, null);
+                return ApiController.buildSuccessResponse(data, app, value);
             } else {
-                return ApiController.buildErrorResponse(201, "卡密已到期", app, null);
+                return ApiController.buildErrorResponse(201, "卡密已到期", app, value);
             }
         } catch (NumberFormatException e) {
-            return ApiController.buildErrorResponse(201, "卡密状态异常", app, null);
+            return ApiController.buildErrorResponse(201, "卡密状态异常", app, value);
         }
     }
 
     /**
      * 次数卡处理
      */
-    private Map<String, Object> handleSingleType(App app, AppKm km, String kami, String markcode, String clientIp, long now) {
+    private Map<String, Object> handleSingleType(App app, AppKm km, String kami, String markcode, String clientIp, long now, String value) {
         int amount = km.getAmount() != null ? km.getAmount() : 0;
 
         // PHP: if($res_kami['amount'] <= 0)out(201,...) -- 次数耗尽
         if (amount <= 0) {
-            return ApiController.buildErrorResponse(201, "卡密已到期", app, null);
+            return ApiController.buildErrorResponse(201, "卡密已到期", app, value);
         }
 
         // 全新卡密
@@ -199,28 +199,28 @@ public class KmlogonHandler {
 
             boolean success = appKmMapper.updateSingleLogin(km.getId(), now, newAmount, markcode, clientIp, "y") > 0;
             if (!success) {
-                return ApiController.buildErrorResponse(201, "登录失败，请重试", app, null);
+                return ApiController.buildErrorResponse(201, "登录失败，请重试", app, value);
             }
 
             String vip = String.valueOf(now + 3600);
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("kami", kami);
             data.put("vip", vip);
-            return ApiController.buildSuccessResponse(data, app, null);
+            return ApiController.buildSuccessResponse(data, app, value);
         }
 
         // 已使用过 - 扣减次数（使用乐观锁，仅在 amount > 0 时扣减）
         // 无限次卡不扣减
         if (amount != SINGLE_UNLIMITED) {
             if (appKmMapper.decreaseAmount(km.getId()) <= 0) {
-                return ApiController.buildErrorResponse(201, "卡密次数已用完", app, null);
+                return ApiController.buildErrorResponse(201, "卡密次数已用完", app, value);
             }
         }
         String vip = String.valueOf(now + 3600);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("kami", kami);
         data.put("vip", vip);
-        return ApiController.buildSuccessResponse(data, app, null);
+        return ApiController.buildSuccessResponse(data, app, value);
     }
 
 }

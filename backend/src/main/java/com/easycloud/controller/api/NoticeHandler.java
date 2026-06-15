@@ -25,13 +25,14 @@ public class NoticeHandler {
      *
      * @param app     应用配置对象
      * @param dataArr 请求参数（此接口不使用额外参数）
+     * @param value   客户端传入的 value 参数，用于 check 字段计算
      * @return 包含公告内容的响应 Map
      */
-    public Map<String, Object> handle(App app, Map<String, String> dataArr) {
+    public Map<String, Object> handle(App app, Map<String, String> dataArr, String value) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("app_gg", app.getAppGg());
 
         // PHP: out(200, $ini_data, $app_res) -> msg 字段放数据
-        return ApiController.buildSuccessResponse(data, app, null);
+        return ApiController.buildSuccessResponse(data, app, value);
     }
 }

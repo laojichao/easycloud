@@ -42,23 +42,23 @@ public class KmunmachineHandler {
     private static final int SINGLE_UNLIMITED = 999999999;
 
     @Transactional
-    public Map<String, Object> handle(App app, Map<String, String> dataArr, HttpServletRequest request) {
+    public Map<String, Object> handle(App app, Map<String, String> dataArr, HttpServletRequest request, String value) {
         // 参数校验
         String kami = dataArr.get("kami");
         if (kami == null || kami.trim().isEmpty()) {
-            return ApiController.buildErrorResponse(148, "卡密不能为空", app, null);
+            return ApiController.buildErrorResponse(148, "卡密不能为空", app, value);
         }
         kami = kami.trim();
 
         String markcode = dataArr.get("markcode");
         if (markcode == null || markcode.trim().isEmpty()) {
-            return ApiController.buildErrorResponse(112, "机器码不能为空", app, null);
+            return ApiController.buildErrorResponse(112, "机器码不能为空", app, value);
         }
         markcode = markcode.trim();
 
         // 免费模式禁止解绑
         if ("n".equals(app.getSwitch_())) {
-            return ApiController.buildErrorResponse(201, "解绑失败,无权限", app, null);
+            return ApiController.buildErrorResponse(201, "解绑失败,无权限", app, value);
         }
 
         // 查询卡密（PHP kmunmachine 不使用 binary）
@@ -70,48 +70,48 @@ public class KmunmachineHandler {
         );
 
         if (km == null) {
-            return ApiController.buildErrorResponse(149, "卡密不存在", app, null);
+            return ApiController.buildErrorResponse(149, "卡密不存在", app, value);
         }
 
         // 卡密状态检查
         if ("n".equals(km.getState())) {
-            return ApiController.buildErrorResponse(151, "卡密已禁用", app, null);
+            return ApiController.buildErrorResponse(151, "卡密已禁用", app, value);
         }
 
         // 机器码匹配检查
         if ("y".equals(app.getKmUnmachine())) {
             if (!markcode.equals(km.getUser())) {
-                return ApiController.buildErrorResponse(201, "解绑失败,无权限", app, null);
+                return ApiController.buildErrorResponse(201, "解绑失败,无权限", app, value);
             }
         }
 
         // 未使用卡密无需解绑
         if (km.getUseTime() == null || km.getUseTime() == 0) {
-            return ApiController.buildErrorResponse(202, "全新卡密,无需解绑", app, null);
+            return ApiController.buildErrorResponse(202, "全新卡密,无需解绑", app, value);
         }
 
         long now = Instant.now().getEpochSecond();
 
         // 时长卡解绑
         if ("code".equals(km.getType())) {
-            return handleCodeUnbind(app, km, now);
+            return handleCodeUnbind(app, km, now, value);
         }
 
         // 次数卡解绑
         if ("single".equals(km.getType())) {
-            return handleSingleUnbind(app, km, now);
+            return handleSingleUnbind(app, km, now, value);
         }
 
-        return ApiController.buildErrorResponse(201, "未知卡密类型", app, null);
+        return ApiController.buildErrorResponse(201, "未知卡密类型", app, value);
     }
 
     /**
      * 时长卡解绑
      */
-    private Map<String, Object> handleCodeUnbind(App app, AppKm km, long now) {
+    private Map<String, Object> handleCodeUnbind(App app, AppKm km, long now, String value) {
         String kmTime = km.getKmTime();
         if (kmTime == null || kmTime.isEmpty()) {
-            return ApiController.buildErrorResponse(201, "卡密时长类型未配置", app, null);
+            return ApiController.buildErrorResponse(201, "卡密时长类型未配置", app, value);
         }
 
         // 永久卡
@@ -119,50 +119,50 @@ public class KmunmachineHandler {
             int kmChange = km.getKmChange() != null ? km.getKmChange() : 0;
             int longuseKmChange = app.getLonguseKmChange() != null ? app.getLonguseKmChange() : 0;
             if (kmChange >= longuseKmChange) {
-                return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, null);
+                return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, value);
             }
 
             if (km.getKmChangeTime() != null && km.getKmChangeTime() > 0) {
                 int kmChangeTime = app.getKmChangeTime() != null ? app.getKmChangeTime() : 0;
                 if ((now - km.getKmChangeTime()) < (3600L * kmChangeTime)) {
-                    return ApiController.buildErrorResponse(201, "解绑失败,换绑时间不足", app, null);
+                    return ApiController.buildErrorResponse(201, "解绑失败,换绑时间不足", app, value);
                 }
             }
 
             appKmMapper.unbindKm(km.getId(), now);
-            return ApiController.buildSuccessResponse("卡密解绑成功", app, null);
+            return ApiController.buildSuccessResponse("卡密解绑成功", app, value);
         }
 
         // 贵宾卡
         if ("vipcard".equals(kmTime)) {
-            return ApiController.buildErrorResponse(202, "贵宾卡无需解绑", app, null);
+            return ApiController.buildErrorResponse(202, "贵宾卡无需解绑", app, value);
         }
 
         // 普通时长卡
         String endTimeStr = km.getEndTime();
         if (endTimeStr == null || endTimeStr.isEmpty()) {
-            return ApiController.buildErrorResponse(201, "卡密状态异常", app, null);
+            return ApiController.buildErrorResponse(201, "卡密状态异常", app, value);
         }
         try {
             long endTime = Long.parseLong(endTimeStr);
             if (endTime < now) {
-                return ApiController.buildErrorResponse(201, "解绑失败,卡密时长不足", app, null);
+                return ApiController.buildErrorResponse(201, "解绑失败,卡密时长不足", app, value);
             }
         } catch (NumberFormatException e) {
-            return ApiController.buildErrorResponse(201, "卡密状态异常", app, null);
+            return ApiController.buildErrorResponse(201, "卡密状态异常", app, value);
         }
 
         if (km.getKmChangeTime() != null && km.getKmChangeTime() > 0) {
             int kmChangeTime = app.getKmChangeTime() != null ? app.getKmChangeTime() : 0;
             if ((now - km.getKmChangeTime()) < (3600L * kmChangeTime)) {
-                return ApiController.buildErrorResponse(201, "解绑失败,换绑时间不足", app, null);
+                return ApiController.buildErrorResponse(201, "解绑失败,换绑时间不足", app, value);
             }
         }
 
         int kmChange = km.getKmChange() != null ? km.getKmChange() : 0;
         int maxKmChange = app.getKmChange() != null ? app.getKmChange() : 0;
         if (kmChange >= maxKmChange) {
-            return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, null);
+            return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, value);
         }
 
         // 计算扣除时长后的结束时间
@@ -175,13 +175,13 @@ public class KmunmachineHandler {
         }
 
         appKmMapper.unbindKmWithDuration(km.getId(), now, newEndTime, now);
-        return ApiController.buildSuccessResponse("卡密解绑成功", app, null);
+        return ApiController.buildSuccessResponse("卡密解绑成功", app, value);
     }
 
     /**
      * 次数卡解绑
      */
-    private Map<String, Object> handleSingleUnbind(App app, AppKm km, long now) {
+    private Map<String, Object> handleSingleUnbind(App app, AppKm km, long now, String value) {
         int amount = km.getAmount() != null ? km.getAmount() : 0;
 
         // 无限次卡
@@ -189,41 +189,41 @@ public class KmunmachineHandler {
             int kmChange = km.getKmChange() != null ? km.getKmChange() : 0;
             int maxKmChange = app.getKmChange() != null ? app.getKmChange() : 0;
             if (kmChange >= maxKmChange) {
-                return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, null);
+                return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, value);
             }
 
             if (km.getKmChangeTime() != null && km.getKmChangeTime() > 0) {
                 int kmChangeTime = app.getKmChangeTime() != null ? app.getKmChangeTime() : 0;
                 if ((now - km.getKmChangeTime()) < (3600L * kmChangeTime)) {
-                    return ApiController.buildErrorResponse(201, "解绑失败,换绑时间不足", app, null);
+                    return ApiController.buildErrorResponse(201, "解绑失败,换绑时间不足", app, value);
                 }
             }
 
             appKmMapper.unbindKm(km.getId(), now);
-            return ApiController.buildSuccessResponse("卡密解绑成功", app, null);
+            return ApiController.buildSuccessResponse("卡密解绑成功", app, value);
         }
 
         // 普通次数卡
         int singleKmChangeNum = app.getSingleKmChangeNum() != null ? app.getSingleKmChangeNum() : 0;
         if (amount < singleKmChangeNum) {
-            return ApiController.buildErrorResponse(201, "次数不足", app, null);
+            return ApiController.buildErrorResponse(201, "次数不足", app, value);
         }
 
         int kmChange = km.getKmChange() != null ? km.getKmChange() : 0;
         int maxKmChange = app.getKmChange() != null ? app.getKmChange() : 0;
         if (kmChange >= maxKmChange) {
-            return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, null);
+            return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, value);
         }
 
         if (km.getKmChangeTime() != null && km.getKmChangeTime() > 0) {
             int kmChangeTime = app.getKmChangeTime() != null ? app.getKmChangeTime() : 0;
             if ((now - km.getKmChangeTime()) < (3600L * kmChangeTime)) {
-                return ApiController.buildErrorResponse(201, "解绑失败,换绑时间不足", app, null);
+                return ApiController.buildErrorResponse(201, "解绑失败,换绑时间不足", app, value);
             }
         }
 
         int newAmount = amount - singleKmChangeNum;
         appKmMapper.unbindKmWithAmount(km.getId(), now, newAmount, now);
-        return ApiController.buildSuccessResponse("卡密解绑成功", app, null);
+        return ApiController.buildSuccessResponse("卡密解绑成功", app, value);
     }
 }

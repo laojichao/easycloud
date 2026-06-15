@@ -35,9 +35,10 @@ public class GetfileHandler {
      *
      * @param app     应用配置对象
      * @param dataArr 请求参数，可选 id 参数用于筛选特定文件
+     * @param value   客户端传入的 value 参数，用于 check 字段计算
      * @return 包含文件列表的响应 Map
      */
-    public Map<String, Object> handle(App app, Map<String, String> dataArr) {
+    public Map<String, Object> handle(App app, Map<String, String> dataArr, String value) {
         Long appId = app.getId();
 
         LambdaQueryWrapper<AppFile> wrapper = new LambdaQueryWrapper<AppFile>()
@@ -67,15 +68,17 @@ public class GetfileHandler {
 
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("file_url", fileUrl);
-            item.put("date", file.getAddtime() != null ? file.getAddtime().toString() : "");
+            // PHP: date 字段为原始数据库 datetime 字符串格式 "yyyy-MM-dd HH:mm:ss"
+            item.put("date", file.getAddtime() != null ?
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(file.getAddtime()) : "");
             item.put("note", file.getNote());
             fileList.add(item);
         }
 
         // PHP: out(200, $ret, $app_res) 或 out(201, '该应用下无外链', $app_res)
         if (fileList.isEmpty()) {
-            return ApiController.buildErrorResponse(201, "该应用下无外链", app, null);
+            return ApiController.buildErrorResponse(201, "该应用下无外链", app, value);
         }
-        return ApiController.buildSuccessResponse(fileList, app, null);
+        return ApiController.buildSuccessResponse(fileList, app, value);
     }
 }

@@ -28,7 +28,7 @@ public class IniHandler {
     /**
      * 处理请求 - 返回格式兼容 PHP out(200, $ini_data, $app_res)
      */
-    public Map<String, Object> handle(App app, Map<String, String> dataArr) {
+    public Map<String, Object> handle(App app, Map<String, String> dataArr, String value) {
         Map<String, Object> iniData = new LinkedHashMap<>();
         iniData.put("version", app.getVersion());
         iniData.put("version_info", app.getVersionInfo());
@@ -37,7 +37,7 @@ public class IniHandler {
         iniData.put("app_update_must", app.getAppUpdateMust());
         iniData.put("api_total", app.getTotal());
 
-        return ApiController.buildSuccessResponse(iniData, app, null);
+        return ApiController.buildSuccessResponse(iniData, app, value);
     }
 
     /**

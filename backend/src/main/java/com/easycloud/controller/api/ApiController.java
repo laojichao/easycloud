@@ -100,13 +100,26 @@ public class ApiController {
         // 更新调用次数（PHP api.php 对所有接口都更新）
         appMapper.updateTotal(appId);
 
-        // 白名单接口直接处理（不解密、不验签）
+        // 白名单接口直接处理（不解密、不验签，但需要加密响应）
         if (WHITE_LIST.contains(api)) {
             Map<String, String> dataArr = collectParams(request);
-            Object result = routeApi(api, action, app, dataArr, request);
-            // 白名单接口不加密
-            String json = objectMapper.writeValueAsString(result);
-            writeResponse(response, json);
+
+            // PHP: if(!$value) $value = $data_arr['value'];
+            if (value == null || value.isEmpty()) {
+                value = dataArr.get("value");
+            }
+
+            Object result = routeApi(api, action, app, dataArr, request, value);
+
+            // PHP: out(200, $data, $app_res) 在 mi_state=y 时会加密响应
+            if (result instanceof Map && "y".equals(app.getMiState()) && app.getMiType() > 0) {
+                String json = objectMapper.writeValueAsString(result);
+                String encrypted = ApiCrypto.encrypt(json, app.getMiType(), app.getRc4Key());
+                writeResponse(response, encrypted);
+            } else {
+                String json = objectMapper.writeValueAsString(result);
+                writeResponse(response, json);
+            }
             return;
         }
 
@@ -220,7 +233,7 @@ public class ApiController {
         }
 
         // 路由到具体 handler
-        Object result = routeApi(api, action, app, dataArr, request);
+        Object result = routeApi(api, action, app, dataArr, request, value);
 
         // 加密输出（非白名单接口才加密）
         if (result instanceof Map) {
@@ -259,20 +272,20 @@ public class ApiController {
     /**
      * 路由到具体的 API Handler
      */
-    private Object routeApi(String api, String action, App app, Map<String, String> dataArr, HttpServletRequest request) {
+    private Object routeApi(String api, String action, App app, Map<String, String> dataArr, HttpServletRequest request, String value) {
         switch (api) {
             case "ini":
-                return iniHandler.handle(app, dataArr);
+                return iniHandler.handle(app, dataArr, value);
             case "notice":
-                return noticeHandler.handle(app, dataArr);
+                return noticeHandler.handle(app, dataArr, value);
             case "getfile":
-                return getfileHandler.handle(app, dataArr);
+                return getfileHandler.handle(app, dataArr, value);
             case "kmlogon":
-                return kmlogonHandler.handle(app, dataArr, request);
+                return kmlogonHandler.handle(app, dataArr, request, value);
             case "kmunmachine":
-                return kmunmachineHandler.handle(app, dataArr, request);
+                return kmunmachineHandler.handle(app, dataArr, request, value);
             default:
-                return buildJsonResponseMap(100, "请绑定应用ID", app, null, null);
+                return buildJsonResponseMap(100, "请绑定应用ID", app, null, value);
         }
     }
 
