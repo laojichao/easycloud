@@ -56,13 +56,9 @@ public class AdminAuthController {
             return Result.fail("系统未配置管理员账号");
         }
 
-        // 密码验证: 兼容 PHP 明文存储 和 Java md5 存储
+        // 密码验证: 仅支持 MD5 哈希比对，禁止明文密码回退（安全要求）
         String encryptedPwd = Md5Util.encryptPassword(password);
         boolean passwordMatch = encryptedPwd.equals(configPwd);
-        // 仅当配置的密码不是MD5格式(32位hex)时，才允许明文匹配（兼容初始安装）
-        if (!passwordMatch && configPwd != null && configPwd.length() != 32) {
-            passwordMatch = password.equals(configPwd);
-        }
 
         if (!username.equals(configUser) || !passwordMatch) {
             return Result.fail("用户名或密码错误");

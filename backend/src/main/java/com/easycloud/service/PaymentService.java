@@ -181,21 +181,18 @@ public class PaymentService {
             return result;
         }
 
-        // 4. 防止重复处理
-        if ("paid".equals(order.getStatus())) {
+        // 4. 原子标记订单为已支付（防止并发重复处理）
+        //    使用原子 UPDATE ... WHERE status = 'pending' 保证幂等性
+        String tradeNo = params.getOrDefault("transaction_id", params.getOrDefault("transaction_id", ""));
+        int affected = paymentOrderMapper.markAsPaid(orderNo, tradeNo, LocalDateTime.now());
+        if (affected == 0) {
+            // 订单已处理过（并发回调或重复通知），直接返回成功
             result.put("return_code", "SUCCESS");
             result.put("return_msg", "OK");
             return result;
         }
 
-        // 5. 更新订单状态
-        String tradeNo = params.getOrDefault("transaction_id", params.getOrDefault("transaction_id", ""));
-        order.setStatus("paid");
-        order.setTradeNo(tradeNo);
-        order.setPayTime(LocalDateTime.now());
-        paymentOrderMapper.updateById(order);
-
-        // 6. 更新用户余额（调用充值逻辑）
+        // 5. 更新用户余额（仅在订单状态成功从 pending 变为 paid 后才充值）
         rechargeUserBalance(order.getUid(), order.getAmount());
 
         log.info("支付成功: orderNo={}, uid={}, amount={}, payType={}",

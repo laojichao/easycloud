@@ -162,7 +162,7 @@
           <el-input v-model="tixianForm.account" placeholder="收款账号（支付宝/微信）" />
         </el-form-item>
         <el-form-item>
-          <el-input v-model="tixianForm.remark" placeholder="备注（可选）" />
+          <el-input v-model="tixianForm.name" placeholder="收款人姓名" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -296,7 +296,7 @@ const applyTixianLoading = ref(false)
  * @property {string} account - 收款账号（支付宝/微信）
  * @property {string} remark - 备注（可选）
  */
-const tixianForm = reactive({ amount: '', account: '', remark: '' })
+const tixianForm = reactive({ amount: '', account: '', name: '', type: 'alipay' })
 
 // ==================== 数据加载函数 ====================
 
@@ -408,8 +408,8 @@ async function handleCheckin() {
       ElMessage.success('签到成功')
       todayChecked.value = true
       // 签到成功后累加积分
-      if (res.data?.points) {
-        userInfo.points = (userInfo.points || 0) + res.data.points
+      if (res.data?.reward) {
+        userInfo.points = (userInfo.points || 0) + res.data.reward
       }
       await loadCheckinList()
     } else {
@@ -470,9 +470,10 @@ async function handleApplyTixian() {
   applyTixianLoading.value = true
   try {
     const res = await applyTixian({
-      amount: Number(tixianForm.amount),
+      money: Number(tixianForm.amount),
       account: tixianForm.account,
-      remark: tixianForm.remark
+      name: tixianForm.name,
+      type: tixianForm.type
     })
     if (res.code === 200) {
       ElMessage.success('提现申请已提交')
@@ -480,7 +481,7 @@ async function handleApplyTixian() {
       // 清空表单
       tixianForm.amount = ''
       tixianForm.account = ''
-      tixianForm.remark = ''
+      tixianForm.name = ''
       await loadTixianList()
     } else {
       ElMessage.error(res.msg || '申请失败')

@@ -124,9 +124,7 @@ public class AdminUserController {
         if (body.containsKey("email")) {
             user.setEmail((String) body.get("email"));
         }
-        if (body.containsKey("rmb")) {
-            user.setRmb(new BigDecimal(body.get("rmb").toString()));
-        }
+        // 注意：rmb 字段不允许通过此接口修改，请使用专用的 /rmb 接口（有审计日志）
 
         userService.updateUser(user);
         user.setPwd(null);

@@ -112,7 +112,7 @@ public class CaptchaService {
         // 不区分大小写比较
         boolean match = cachedCode.equalsIgnoreCase(code.trim());
         if (!match) {
-            log.warn("验证码不正确: captchaId={}, expected={}, input={}", captchaId, cachedCode, code);
+            log.warn("验证码不正确: captchaId={}", captchaId);
         }
         return match;
     }

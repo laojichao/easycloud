@@ -137,6 +137,8 @@ CREATE TABLE IF NOT EXISTS yixi_payment_order (
   create_time TIMESTAMP NOT NULL,
   pay_time TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_payment_order_uid ON yixi_payment_order(uid);
+CREATE INDEX IF NOT EXISTS idx_payment_order_status ON yixi_payment_order(status);
 
 -- 支付配置默认值（存储在 yixi_config 中）
 MERGE INTO yixi_config (k, v) VALUES ('wxpay_appid', '');
@@ -225,7 +227,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_yixi_user ON yixi_user(user);
 
 -- Default admin config (matching PHP install/simple.sql)
 MERGE INTO yixi_config (k, v) VALUES ('admin_user', 'admin');
-MERGE INTO yixi_config (k, v) VALUES ('admin_pwd', '123456');
+MERGE INTO yixi_config (k, v) VALUES ('admin_pwd', '***REMOVED***');
 MERGE INTO yixi_config (k, v) VALUES ('sitename', '极简云验证');
 MERGE INTO yixi_config (k, v) VALUES ('kfqq', '123456');
 MERGE INTO yixi_config (k, v) VALUES ('template', 'default');

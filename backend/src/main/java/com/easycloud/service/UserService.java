@@ -100,24 +100,27 @@ public class UserService {
     }
 
     /**
-     * 更新用户余额
+     * 原子更新用户余额（防止并发竞态条件）
+     * <p>
+     * 使用 SQL 层面的原子操作 UPDATE ... SET rmb = rmb + amount，
+     * 避免 SELECT-then-UPDATE 的 TOCTOU 竞态条件。
+     * 在并发场景下（如同时提现、同时支付回调），保证余额不会出现负数或丢失更新。
      *
      * @param uid    用户ID
      * @param amount 变动金额（正数增加，负数减少）
+     * @throws RuntimeException 用户不存在或余额不足
      */
     @Transactional
     public void updateRmb(Long uid, BigDecimal amount) {
-        User user = userMapper.selectById(uid);
-        if (user == null) {
-            throw new RuntimeException("用户不存在");
-        }
-        BigDecimal currentRmb = user.getRmb() != null ? user.getRmb() : BigDecimal.ZERO;
-        BigDecimal newRmb = currentRmb.add(amount);
-        if (newRmb.compareTo(BigDecimal.ZERO) < 0) {
+        int affected = userMapper.updateRmbAtomic(uid, amount);
+        if (affected == 0) {
+            // 可能是用户不存在或余额不足
+            User user = userMapper.selectById(uid);
+            if (user == null) {
+                throw new RuntimeException("用户不存在");
+            }
             throw new RuntimeException("余额不足");
         }
-        user.setRmb(newRmb);
-        userMapper.updateById(user);
     }
 
     /**

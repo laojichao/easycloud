@@ -190,7 +190,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Setting, Lock, Refresh, Check, User, Coin, SetUp, Message } from '@element-plus/icons-vue'
 import { getSettings, saveSettings, refreshCache, changePassword, changeAccount } from '@/api/admin'
 import request from '@/api/request'
@@ -272,12 +272,18 @@ async function handleChangeAccount() {
 }
 
 async function handleRefreshCache() {
+  try {
+    await ElMessageBox.confirm('确定刷新系统缓存？', '确认操作', { type: 'info', confirmButtonText: '执行', cancelButtonText: '取消' })
+  } catch { return }
   const res = await refreshCache()
   if (res.code === 200) ElMessage.success('缓存刷新成功')
   else ElMessage.error(res.msg || '缓存刷新失败')
 }
 
 async function handleDbOptim() {
+  try {
+    await ElMessageBox.confirm('确定优化数据库？此操作可能需要一些时间。', '确认操作', { type: 'warning', confirmButtonText: '执行', cancelButtonText: '取消' })
+  } catch { return }
   try {
     const res = await request.post('/api/admin/setting/db-optim')
     if (res.code === 200) ElMessage.success('数据库优化完成')
@@ -287,6 +293,9 @@ async function handleDbOptim() {
 
 async function handleDbRepair() {
   try {
+    await ElMessageBox.confirm('确定修复数据库？此操作将对所有表执行 REPAIR TABLE。', '确认操作', { type: 'warning', confirmButtonText: '执行', cancelButtonText: '取消' })
+  } catch { return }
+  try {
     const res = await request.post('/api/admin/setting/db-repair')
     if (res.code === 200) ElMessage.success('数据库修复完成')
     else ElMessage.error(res.msg || '操作失败')
@@ -294,6 +303,9 @@ async function handleDbRepair() {
 }
 
 async function handleMailTest() {
+  try {
+    await ElMessageBox.confirm('确定发送测试邮件？', '确认操作', { type: 'info', confirmButtonText: '发送', cancelButtonText: '取消' })
+  } catch { return }
   try {
     const res = await request.post('/api/admin/setting/mail-test')
     if (res.code === 200) ElMessage.success('测试邮件已发送')

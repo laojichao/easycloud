@@ -165,11 +165,12 @@ public class KmunmachineHandler {
             return ApiController.buildErrorResponse(201, "解绑失败,可解绑次数不足", app, value);
         }
 
-        // 计算扣除时长后的结束时间
+        // 计算扣除时长后的结束时间（防止产生负值）
         int kmChangeNum = app.getKmChangeNum() != null ? app.getKmChangeNum() : 0;
         long newEndTime;
         try {
             newEndTime = Long.parseLong(km.getEndTime()) - (3600L * kmChangeNum);
+            if (newEndTime < now) newEndTime = now; // 不能低于当前时间
         } catch (NumberFormatException e) {
             newEndTime = now;
         }

@@ -53,7 +53,11 @@ public class AdminSettingController {
     private final LogUtil logUtil;
 
     /** 敏感配置项 - 不允许通过接口读取或修改 */
-    private static final Set<String> SENSITIVE_KEYS = Set.of("admin_pwd", "admin_user", "db_pwd", "mail_pwd");
+    private static final Set<String> SENSITIVE_KEYS = Set.of(
+            "admin_pwd", "admin_user", "db_pwd", "mail_pwd",
+            "wxpay_key", "qqpay_key", "sms_appkey", "api_key",
+            "access_token", "mi_rsa_private_key"
+    );
 
     /**
      * 获取所有设置
@@ -122,13 +126,9 @@ public class AdminSettingController {
         }
 
         String currentPwd = configService.getSetting("admin_pwd");
-        // 兼容 PHP 明文和 Java md5
+        // 仅支持 MD5 哈希比对，禁止明文密码回退（安全要求）
         String encryptedOldPwd = Md5Util.encryptPassword(oldPwd);
         boolean passwordMatch = encryptedOldPwd.equals(currentPwd);
-        // 仅当配置的密码不是MD5格式(32位hex)时，才允许明文匹配（兼容初始安装）
-        if (!passwordMatch && currentPwd != null && currentPwd.length() != 32) {
-            passwordMatch = oldPwd.equals(currentPwd);
-        }
 
         if (!passwordMatch) {
             return Result.fail("旧密码错误");

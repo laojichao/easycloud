@@ -23,7 +23,7 @@ import java.util.Date;
 public class JwtUtil {
 
     /** JWT 签名密钥（从配置文件读取，需至少 32 字符） */
-    @Value("${jwt.secret:easycloud-default-secret-key-must-be-32-chars-long!!}")
+    @Value("${jwt.secret}")
     private String secret;
 
     /** JWT Token 有效期（毫秒），默认 86400000ms = 24小时 */
