@@ -113,13 +113,15 @@ function statusLabel(status) {
 
 async function handleRefund(row) {
   await ElMessageBox.confirm(`确定对订单 ${row.orderNo} 执行退款？退款将扣减用户余额。`, '确认退款', { type: 'warning' })
-  const res = await refundPayOrder(row.orderNo)
-  if (res.code === 200) {
-    ElMessage.success('退款成功')
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '退款失败')
-  }
+  try {
+    const res = await refundPayOrder(row.orderNo)
+    if (res.code === 200) {
+      ElMessage.success('退款成功')
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '退款失败')
+    }
+  } catch (e) { ElMessage.error('退款失败') }
 }
 </script>
 

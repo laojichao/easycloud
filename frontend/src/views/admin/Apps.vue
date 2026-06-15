@@ -471,12 +471,16 @@ async function handleSaveNote() {
 }
 
 async function handleToggle(row, field, value) {
-  const res = await toggleApp(row.id, field, value)
-  if (res.code === 200) {
-    ElMessage.success('操作成功')
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '操作失败')
+  try {
+    const res = await toggleApp(row.id, field, value)
+    if (res.code === 200) {
+      ElMessage.success('操作成功')
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '操作失败')
+    }
+  } catch (e) {
+    ElMessage.error('操作失败')
   }
 }
 
@@ -484,12 +488,16 @@ async function handleDelete(row) {
   await ElMessageBox.confirm('确定删除该应用？此操作不可恢复。', '确认删除', {
     type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消'
   })
-  const res = await deleteApp(row.id)
-  if (res.code === 200) {
-    ElMessage.success('删除成功')
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '删除失败')
+  try {
+    const res = await deleteApp(row.id)
+    if (res.code === 200) {
+      ElMessage.success('删除成功')
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '删除失败')
+    }
+  } catch (e) {
+    ElMessage.error('删除失败')
   }
 }
 
@@ -498,13 +506,17 @@ async function handleBatch(action) {
   if (action === 'delete') {
     await ElMessageBox.confirm(`确定批量删除 ${selectedIds.value.length} 个应用？`, '确认', { type: 'warning' })
   }
-  const res = await batchApp(action, selectedIds.value)
-  if (res.code === 200) {
-    ElMessage.success(`批量${labels[action]}成功`)
-    selectedIds.value = []
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '操作失败')
+  try {
+    const res = await batchApp(action, selectedIds.value)
+    if (res.code === 200) {
+      ElMessage.success(`批量${labels[action]}成功`)
+      selectedIds.value = []
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '操作失败')
+    }
+  } catch (e) {
+    ElMessage.error('操作失败')
   }
 }
 

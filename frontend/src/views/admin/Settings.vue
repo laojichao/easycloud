@@ -275,9 +275,11 @@ async function handleRefreshCache() {
   try {
     await ElMessageBox.confirm('确定刷新系统缓存？', '确认操作', { type: 'info', confirmButtonText: '执行', cancelButtonText: '取消' })
   } catch { return }
-  const res = await refreshCache()
-  if (res.code === 200) ElMessage.success('缓存刷新成功')
-  else ElMessage.error(res.msg || '缓存刷新失败')
+  try {
+    const res = await refreshCache()
+    if (res.code === 200) ElMessage.success('缓存刷新成功')
+    else ElMessage.error(res.msg || '缓存刷新失败')
+  } catch (e) { ElMessage.error('缓存刷新失败') }
 }
 
 async function handleDbOptim() {

@@ -302,6 +302,11 @@ public class AdminAppController {
             return Result.fail("参数不完整");
         }
 
+        // 校验开关值只允许 y/n
+        if (!"y".equals(value) && !"n".equals(value)) {
+            return Result.fail("状态值无效，只允许 y 或 n");
+        }
+
         switch (field) {
             case "active":
                 app.setActive(value);

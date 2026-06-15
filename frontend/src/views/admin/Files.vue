@@ -122,6 +122,7 @@ const form = reactive({ appid: '', fileUrl: '', type: 'direct', lanzouPass: '', 
 onMounted(() => loadData())
 
 async function loadData() {
+  if (loading.value) return
   loading.value = true
   try {
     const params = { page: currentPage.value, size: pageSize.value }
@@ -171,16 +172,20 @@ async function handleSave() {
 }
 
 async function handleToggle(row) {
-  const res = await toggleFile(row.id)
-  if (res.code === 200) { ElMessage.success('操作成功'); loadData() }
-  else ElMessage.error(res.msg || '操作失败')
+  try {
+    const res = await toggleFile(row.id)
+    if (res.code === 200) { ElMessage.success('操作成功'); loadData() }
+    else ElMessage.error(res.msg || '操作失败')
+  } catch (e) { ElMessage.error('操作失败') }
 }
 
 async function handleDelete(row) {
   await ElMessageBox.confirm('确定删除？', '确认删除', { type: 'warning' })
-  const res = await deleteFile(row.id)
-  if (res.code === 200) { ElMessage.success('删除成功'); loadData() }
-  else ElMessage.error(res.msg || '删除失败')
+  try {
+    const res = await deleteFile(row.id)
+    if (res.code === 200) { ElMessage.success('删除成功'); loadData() }
+    else ElMessage.error(res.msg || '删除失败')
+  } catch (e) { ElMessage.error('删除失败') }
 }
 
 async function handleBatch(action) {
@@ -188,14 +193,16 @@ async function handleBatch(action) {
   if (action === 'delete') {
     await ElMessageBox.confirm(`确定批量删除 ${selectedIds.value.length} 个文件？`, '确认', { type: 'warning' })
   }
-  const res = await batchFile(action, selectedIds.value)
-  if (res.code === 200) {
-    ElMessage.success(`批量${labels[action]}成功`)
-    selectedIds.value = []
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '操作失败')
-  }
+  try {
+    const res = await batchFile(action, selectedIds.value)
+    if (res.code === 200) {
+      ElMessage.success(`批量${labels[action]}成功`)
+      selectedIds.value = []
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '操作失败')
+    }
+  } catch (e) { ElMessage.error('操作失败') }
 }
 </script>
 

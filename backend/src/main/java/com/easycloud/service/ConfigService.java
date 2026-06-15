@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 系统配置服务
@@ -35,6 +36,22 @@ public class ConfigService {
 
     private static final String REDIS_KEY = "easycloud:config";
 
+    /** 敏感配置键名 - 日志中需要脱敏 */
+    private static final Set<String> SENSITIVE_KEYS = Set.of(
+            "admin_pwd", "admin_user", "db_pwd", "mail_pwd",
+            "wxpay_key", "qqpay_key", "sms_appkey", "api_key",
+            "access_token", "mi_rsa_private_key"
+    );
+
+    /**
+     * 日志脱敏：敏感键名只保留首尾字符，中间用 *** 替代
+     */
+    private String maskKey(String key) {
+        if (key == null) return "null";
+        if (SENSITIVE_KEYS.contains(key)) return key.substring(0, 2) + "***";
+        return key;
+    }
+
     private final SysConfigMapper sysConfigMapper;
     private final StringRedisTemplate stringRedisTemplate;
 
@@ -51,7 +68,7 @@ public class ConfigService {
                 return val.toString();
             }
         } catch (Exception e) {
-            log.warn("Redis 读取配置失败，降级查 DB: key={}, error={}", key, e.getMessage());
+            log.warn("Redis 读取配置失败，降级查 DB: key={}, error={}", maskKey(key), e.getMessage());
         }
 
         // 2. 查 DB
@@ -64,7 +81,7 @@ public class ConfigService {
         try {
             stringRedisTemplate.opsForHash().put(REDIS_KEY, key, config.getV());
         } catch (Exception e) {
-            log.warn("Redis 回写配置失败: key={}, error={}", key, e.getMessage());
+            log.warn("Redis 回写配置失败: key={}, error={}", maskKey(key), e.getMessage());
         }
         return config.getV();
     }
@@ -88,7 +105,7 @@ public class ConfigService {
                 sysConfigMapper.insert(config);
             } catch (Exception e) {
                 // 并发场景下可能因唯一约束冲突，此时转为更新
-                log.debug("配置插入冲突，转为更新: key={}", key);
+                log.debug("配置插入冲突，转为更新: key={}", maskKey(key));
                 SysConfig fallback = new SysConfig();
                 fallback.setK(key);
                 fallback.setV(value);
@@ -100,7 +117,7 @@ public class ConfigService {
         try {
             stringRedisTemplate.opsForHash().put(REDIS_KEY, key, value);
         } catch (Exception e) {
-            log.warn("Redis 写入配置失败: key={}, error={}", key, e.getMessage());
+            log.warn("Redis 写入配置失败: key={}, error={}", maskKey(key), e.getMessage());
         }
     }
 

@@ -172,23 +172,30 @@ async function handleSave() {
 
 async function handleDelete(row) {
   await ElMessageBox.confirm(`确定删除用户 ${row.user}？此操作不可恢复。`, '确认删除', { type: 'warning' })
-  const res = await deleteUser(row.uid)
-  if (res.code === 200) {
-    ElMessage.success('删除成功')
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '删除失败')
-  }
+  try {
+    const res = await deleteUser(row.uid)
+    if (res.code === 200) {
+      ElMessage.success('删除成功')
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '删除失败')
+    }
+  } catch (e) { ElMessage.error('删除失败') }
 }
 
 async function handleAdjustRmb() {
-  if (!rmbAmount.value || Number(rmbAmount.value) === 0) {
+  const amount = Number(rmbAmount.value)
+  if (!rmbAmount.value || !isFinite(amount) || amount === 0) {
     ElMessage.warning('请输入有效金额')
+    return
+  }
+  if (!rmbUser.value?.uid) {
+    ElMessage.warning('用户信息异常')
     return
   }
   adjusting.value = true
   try {
-    const res = await adjustUserRmb(rmbUser.value.uid, { amount: Number(rmbAmount.value) })
+    const res = await adjustUserRmb(rmbUser.value.uid, { amount })
     if (res.code === 200) {
       ElMessage.success('余额调整成功')
       rmbDialogVisible.value = false
@@ -196,6 +203,8 @@ async function handleAdjustRmb() {
     } else {
       ElMessage.error(res.msg || '调整失败')
     }
+  } catch (e) {
+    ElMessage.error('调整失败')
   } finally {
     adjusting.value = false
   }

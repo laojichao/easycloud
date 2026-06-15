@@ -129,6 +129,10 @@ async function handleApprove() {
     ElMessage.warning('请输入有效的到账金额')
     return
   }
+  if (!approveTarget.value?.id) {
+    ElMessage.warning('提现信息异常')
+    return
+  }
   approving.value = true
   try {
     const res = await approveTixian(approveTarget.value.id, { realmoney: Number(realMoney.value) })
@@ -139,6 +143,8 @@ async function handleApprove() {
     } else {
       ElMessage.error(res.msg || '操作失败')
     }
+  } catch (e) {
+    ElMessage.error('操作失败')
   } finally {
     approving.value = false
   }
@@ -146,13 +152,15 @@ async function handleApprove() {
 
 async function handleReject(row) {
   await ElMessageBox.confirm('确定拒绝该提现申请？用户余额将自动退回。', '确认拒绝', { type: 'warning' })
-  const res = await rejectTixian(row.id)
-  if (res.code === 200) {
-    ElMessage.success('已拒绝，余额已退回')
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '操作失败')
-  }
+  try {
+    const res = await rejectTixian(row.id)
+    if (res.code === 200) {
+      ElMessage.success('已拒绝，余额已退回')
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '操作失败')
+    }
+  } catch (e) { ElMessage.error('操作失败') }
 }
 </script>
 

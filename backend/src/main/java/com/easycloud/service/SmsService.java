@@ -150,7 +150,7 @@ public class SmsService {
                     .build();
 
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-            log.info("腾讯云短信发送结果: phone={}, status={}, body={}", phone, response.statusCode(), response.body());
+            log.info("腾讯云短信发送结果: phone={}, status={}", phone, response.statusCode());
             return response.statusCode() == 200 && response.body().contains("\"result\":0");
         } catch (Exception e) {
             log.error("腾讯云短信发送失败: phone={}, error={}", phone, e.getMessage(), e);
@@ -249,7 +249,7 @@ public class SmsService {
                     .build();
 
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-            log.info("978w短信发送结果: phone={}, status={}, body={}", phone, response.statusCode(), response.body());
+            log.info("978w短信发送结果: phone={}, status={}", phone, response.statusCode());
             return response.statusCode() == 200;
         } catch (Exception e) {
             log.error("978w短信发送失败: phone={}, error={}", phone, e.getMessage(), e);

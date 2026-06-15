@@ -319,23 +319,29 @@ async function handleGenerate() {
 }
 
 async function handleToggle(row) {
-  const res = await toggleKm(row.id, row.state === 'y' ? 'n' : 'y')
-  if (res.code === 200) { ElMessage.success('操作成功'); loadData() }
-  else ElMessage.error(res.msg || '操作失败')
+  try {
+    const res = await toggleKm(row.id, row.state === 'y' ? 'n' : 'y')
+    if (res.code === 200) { ElMessage.success('操作成功'); loadData() }
+    else ElMessage.error(res.msg || '操作失败')
+  } catch (e) { ElMessage.error('操作失败') }
 }
 
 async function handleUnbind(row) {
   await ElMessageBox.confirm('确定解绑该卡密？', '确认', { type: 'warning' })
-  const res = await unbindKm(row.id)
-  if (res.code === 200) { ElMessage.success('解绑成功'); loadData() }
-  else ElMessage.error(res.msg || '解绑失败')
+  try {
+    const res = await unbindKm(row.id)
+    if (res.code === 200) { ElMessage.success('解绑成功'); loadData() }
+    else ElMessage.error(res.msg || '解绑失败')
+  } catch (e) { ElMessage.error('解绑失败') }
 }
 
 async function handleDelete(row) {
   await ElMessageBox.confirm('确定删除该卡密？', '确认删除', { type: 'warning' })
-  const res = await deleteKm(row.id)
-  if (res.code === 200) { ElMessage.success('删除成功'); loadData() }
-  else ElMessage.error(res.msg || '删除失败')
+  try {
+    const res = await deleteKm(row.id)
+    if (res.code === 200) { ElMessage.success('删除成功'); loadData() }
+    else ElMessage.error(res.msg || '删除失败')
+  } catch (e) { ElMessage.error('删除失败') }
 }
 
 async function handleBatch(action) {
@@ -401,13 +407,15 @@ async function handleExport(scope) {
 async function handleClean(useStatus) {
   const labels = { all: '全部', used: '已使用', unused: '未使用', expired: '已过期' }
   await ElMessageBox.confirm(`确定清空${labels[useStatus]}卡密？此操作不可恢复！`, '确认清理', { type: 'warning' })
-  const res = await cleanKm({ appid: filter.appid || undefined, useStatus })
-  if (res.code === 200) {
-    ElMessage.success('清理成功')
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '清理失败')
-  }
+  try {
+    const res = await cleanKm({ appid: filter.appid || undefined, useStatus })
+    if (res.code === 200) {
+      ElMessage.success('清理成功')
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '清理失败')
+    }
+  } catch (e) { ElMessage.error('清理失败') }
 }
 </script>
 

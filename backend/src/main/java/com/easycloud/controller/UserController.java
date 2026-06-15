@@ -7,6 +7,7 @@ import com.easycloud.entity.User;
 import com.easycloud.service.CheckinService;
 import com.easycloud.service.InviteService;
 import com.easycloud.service.PointService;
+import com.easycloud.service.RateLimiterService;
 import com.easycloud.service.TixianService;
 import com.easycloud.service.UserService;
 import com.easycloud.service.WorkOrderService;
@@ -46,6 +47,7 @@ public class UserController {
     private final PointService pointService;
     private final TixianService tixianService;
     private final UserService userService;
+    private final RateLimiterService rateLimiterService;
     private final JwtUtil jwtUtil;
 
     // ==================== 登录/注册 ====================
@@ -60,7 +62,13 @@ public class UserController {
      * @return 成功返回 {token, uid, username}，失败返回错误消息
      */
     @PostMapping("/login")
-    public Result<Map<String, Object>> login(@RequestBody Map<String, String> body) {
+    public Result<Map<String, Object>> login(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        // 速率限制：同一 IP 5分钟内最多10次登录尝试
+        String clientIp = ClientIpUtil.getClientIp(request);
+        if (!rateLimiterService.isAllowed("user_login:" + clientIp, 10, 300)) {
+            return Result.fail("登录尝试过于频繁，请5分钟后再试");
+        }
+
         String username = body.get("username");
         String password = body.get("password");
 
@@ -98,6 +106,12 @@ public class UserController {
      */
     @PostMapping("/register")
     public Result<User> register(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        // 速率限制：同一 IP 10分钟内最多5次注册
+        String clientIp = ClientIpUtil.getClientIp(request);
+        if (!rateLimiterService.isAllowed("user_register:" + clientIp, 5, 600)) {
+            return Result.fail("注册过于频繁，请10分钟后再试");
+        }
+
         String username = body.get("username");
         String password = body.get("password");
         String qq = body.get("qq");

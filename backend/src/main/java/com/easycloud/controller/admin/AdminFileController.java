@@ -103,8 +103,22 @@ public class AdminFileController {
      */
     @PutMapping("/{id}")
     public Result<?> update(@PathVariable Long id, @RequestBody AppFile file) {
-        file.setId(id);
-        appFileMapper.updateById(file);
+        AppFile existing = appFileMapper.selectById(id);
+        if (existing == null) {
+            return Result.fail("文件不存在");
+        }
+        // 仅更新允许的字段，防止 mass assignment
+        if (file.getFileUrl() != null) {
+            if (!file.getFileUrl().matches("^https?://.+")) {
+                return Result.fail("文件链接格式不正确，需以 http:// 或 https:// 开头");
+            }
+            existing.setFileUrl(file.getFileUrl());
+        }
+        if (file.getAppid() != null) existing.setAppid(file.getAppid());
+        if (file.getType() != null) existing.setType(file.getType());
+        if (file.getLanzouPass() != null) existing.setLanzouPass(file.getLanzouPass());
+        if (file.getNote() != null) existing.setNote(file.getNote());
+        appFileMapper.updateById(existing);
         return Result.ok("更新成功");
     }
 

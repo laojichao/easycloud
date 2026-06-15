@@ -93,7 +93,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/admin/**")
                 .excludePathPatterns("/api/admin/login");
         registry.addInterceptor(userAuthInterceptor)
-                .addPathPatterns("/api/user/**", "/api/pay/create")
+                .addPathPatterns("/api/user/**", "/api/pay/create", "/api/pay/status/**")
                 .excludePathPatterns("/api/user/login", "/api/user/register");
     }
 

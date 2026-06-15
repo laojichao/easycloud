@@ -1,14 +1,18 @@
 package com.easycloud.controller.admin;
 
+import com.easycloud.common.ClientIpUtil;
 import com.easycloud.common.JwtUtil;
 import com.easycloud.common.Md5Util;
 import com.easycloud.common.Result;
 import com.easycloud.entity.User;
 import com.easycloud.service.ConfigService;
+import com.easycloud.service.RateLimiterService;
 import com.easycloud.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,12 +36,19 @@ public class AdminAuthController {
     private final JwtUtil jwtUtil;
     private final ConfigService configService;
     private final UserService userService;
+    private final RateLimiterService rateLimiterService;
 
     /**
      * 管理员登录
      */
     @PostMapping("/login")
-    public Result<?> login(@RequestBody Map<String, String> body) {
+    public Result<?> login(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        // 速率限制：同一 IP 5分钟内最多10次登录尝试
+        String clientIp = ClientIpUtil.getClientIp(request);
+        if (!rateLimiterService.isAllowed("admin_login:" + clientIp, 10, 300)) {
+            return Result.fail("登录尝试过于频繁，请5分钟后再试");
+        }
+
         String username = body.get("username");
         String password = body.get("password");
 
@@ -56,11 +67,17 @@ public class AdminAuthController {
             return Result.fail("系统未配置管理员账号");
         }
 
-        // 密码验证: 仅支持 MD5 哈希比对，禁止明文密码回退（安全要求）
+        // 密码验证: 使用常量时间比对防止时序攻击
         String encryptedPwd = Md5Util.encryptPassword(password);
-        boolean passwordMatch = encryptedPwd.equals(configPwd);
+        boolean passwordMatch = MessageDigest.isEqual(
+                encryptedPwd.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                configPwd.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
-        if (!username.equals(configUser) || !passwordMatch) {
+        // 用户名也使用常量时间比对，防止时序攻击泄露用户名是否存在
+        boolean usernameMatch = MessageDigest.isEqual(
+                (username != null ? username : "").getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                (configUser != null ? configUser : "").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        if (!usernameMatch || !passwordMatch) {
             return Result.fail("用户名或密码错误");
         }
 

@@ -94,7 +94,7 @@ public class PayController {
         try {
             // 读取请求体（XML 格式）
             String xmlBody = readRequestBody(request);
-            log.info("收到支付回调: payType={}, body={}", payType, xmlBody);
+            log.info("收到支付回调: payType={}", payType);
 
             // 解析 XML 为 Map
             Map<String, String> params = XmlUtil.xmlToMap(xmlBody);

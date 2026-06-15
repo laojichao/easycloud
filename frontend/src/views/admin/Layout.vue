@@ -45,8 +45,8 @@
         </div>
         <div class="top-right">
           <div class="user-info">
-            <div class="user-avatar">{{ userStore.username?.charAt(0)?.toUpperCase() || 'A' }}</div>
-            <span class="user-name">{{ userStore.username || 'Admin' }}</span>
+            <div class="user-avatar">{{ userStore.adminUsername?.charAt(0)?.toUpperCase() || 'A' }}</div>
+            <span class="user-name">{{ userStore.adminUsername || 'Admin' }}</span>
           </div>
           <button class="logout-btn" @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>

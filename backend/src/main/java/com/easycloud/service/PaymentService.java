@@ -155,7 +155,7 @@ public class PaymentService {
         }
 
         if (!verifySign(params, payKey)) {
-            log.warn("支付回调签名验证失败: payType={}, params={}", payType, params);
+            log.warn("支付回调签名验证失败: payType={}, out_trade_no={}", payType, params.get("out_trade_no"));
             result.put("return_code", "FAIL");
             result.put("return_msg", "签名验证失败");
             return result;

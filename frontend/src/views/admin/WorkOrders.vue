@@ -117,6 +117,10 @@ async function handleReply() {
     ElMessage.warning('请输入回复内容')
     return
   }
+  if (!replyTarget.value?.id) {
+    ElMessage.warning('工单信息异常')
+    return
+  }
   replying.value = true
   try {
     const res = await replyWorkOrder(replyTarget.value.id, { reply: replyContent.value })
@@ -127,6 +131,8 @@ async function handleReply() {
     } else {
       ElMessage.error(res.msg || '回复失败')
     }
+  } catch (e) {
+    ElMessage.error('回复失败')
   } finally {
     replying.value = false
   }
@@ -134,13 +140,15 @@ async function handleReply() {
 
 async function handleClose(row) {
   await ElMessageBox.confirm('确定关闭该工单？', '确认', { type: 'warning' })
-  const res = await closeWorkOrder(row.id)
-  if (res.code === 200) {
-    ElMessage.success('工单已关闭')
-    loadData()
-  } else {
-    ElMessage.error(res.msg || '操作失败')
-  }
+  try {
+    const res = await closeWorkOrder(row.id)
+    if (res.code === 200) {
+      ElMessage.success('工单已关闭')
+      loadData()
+    } else {
+      ElMessage.error(res.msg || '操作失败')
+    }
+  } catch (e) { ElMessage.error('操作失败') }
 }
 </script>
 

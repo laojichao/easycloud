@@ -17,6 +17,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -128,7 +130,9 @@ public class AdminSettingController {
         String currentPwd = configService.getSetting("admin_pwd");
         // 仅支持 MD5 哈希比对，禁止明文密码回退（安全要求）
         String encryptedOldPwd = Md5Util.encryptPassword(oldPwd);
-        boolean passwordMatch = encryptedOldPwd.equals(currentPwd);
+        boolean passwordMatch = MessageDigest.isEqual(
+                encryptedOldPwd.getBytes(StandardCharsets.UTF_8),
+                currentPwd.getBytes(StandardCharsets.UTF_8));
 
         if (!passwordMatch) {
             return Result.fail("旧密码错误");
@@ -158,7 +162,9 @@ public class AdminSettingController {
         String currentPwd = configService.getSetting("admin_pwd");
         // 仅支持 MD5 哈希比对，禁止明文密码回退（安全要求）
         String encryptedOldPwd = Md5Util.encryptPassword(oldPwd);
-        boolean passwordMatch = encryptedOldPwd.equals(currentPwd);
+        boolean passwordMatch = MessageDigest.isEqual(
+                encryptedOldPwd.getBytes(StandardCharsets.UTF_8),
+                currentPwd.getBytes(StandardCharsets.UTF_8));
         if (!passwordMatch) {
             return Result.fail("密码错误");
         }
