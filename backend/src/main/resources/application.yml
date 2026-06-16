@@ -12,7 +12,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/easycloud?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:root}
+    password: ${DB_PASSWORD}
     hikari:
       minimum-idle: 5
       maximum-pool-size: 20
@@ -54,9 +54,9 @@ knife4j:
     language: zh_cn
 
 jwt:
-  # IMPORTANT: In production, set JWT_SECRET environment variable (min 32 chars)
+  # IMPORTANT: JWT_SECRET environment variable is REQUIRED (min 32 chars)
   # Generate with: openssl rand -base64 48
-  secret: ${JWT_SECRET:***REMOVED***}
+  secret: ${JWT_SECRET}
   expiration: 86400000
 
 # Actuator 健康检查

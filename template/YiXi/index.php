@@ -366,7 +366,7 @@
                                             <li>
                                                 <h6></h6>
                                                 <div class="text">
-                                                   <!--  <p>QQ群:***REMOVED***</p> -->
+                                                   <!--  <p>QQ群:598018022</p> -->
                                                     <p>邮箱:admin@simpleauth.cn</p>
                                                 </div>
                                             </li>

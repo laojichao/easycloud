@@ -6,7 +6,7 @@ $act=isset($_GET['act'])?daddslashes($_GET['act']):null;
 
 function jc_hm($len = 1)
 {
-    $str = "***REMOVED***";
+    $str = "123456789";
     $strlen = strlen($str);
     $randstr = "";
     for ($i = 0; $i < $len; $i++) {

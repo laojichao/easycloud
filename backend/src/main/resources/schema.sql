@@ -226,8 +226,10 @@ CREATE TABLE IF NOT EXISTS yixi_user (
 CREATE UNIQUE INDEX IF NOT EXISTS uk_yixi_user ON yixi_user(user);
 
 -- Default admin config (matching PHP install/simple.sql)
+-- IMPORTANT: Change admin_pwd immediately after first login!
+-- Generate hash with: echo -n "your_password!@#%!s!0" | md5sum
 MERGE INTO yixi_config (k, v) VALUES ('admin_user', 'admin');
-MERGE INTO yixi_config (k, v) VALUES ('admin_pwd', '***REMOVED***');
+MERGE INTO yixi_config (k, v) VALUES ('admin_pwd', 'PLEASE_SET_VIA_INSTALL_SCRIPT');
 MERGE INTO yixi_config (k, v) VALUES ('sitename', '极简云验证');
 MERGE INTO yixi_config (k, v) VALUES ('kfqq', '123456');
 MERGE INTO yixi_config (k, v) VALUES ('template', 'default');

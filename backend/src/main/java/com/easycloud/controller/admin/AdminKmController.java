@@ -45,12 +45,12 @@ public class AdminKmController {
     private final AppMapper appMapper;
 
     /** 7种卡密结构的字符池 */
-    private static final String CHARS_ALL = "abcdefghijklmnopqrstuvwxyz0***REMOVED***ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String CHARS_LOWER_NUM = "abcdefghijklmnopqrstuvwxyz0***REMOVED***";
-    private static final String CHARS_UPPER_NUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0***REMOVED***";
+    private static final String CHARS_ALL = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String CHARS_LOWER_NUM = "abcdefghijklmnopqrstuvwxyz0123456789";
+    private static final String CHARS_UPPER_NUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final String CHARS_LOWER = "abcdefghijklmnopqrstuvwxyz";
     private static final String CHARS_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String CHARS_NUM = "0***REMOVED***";
+    private static final String CHARS_NUM = "0123456789";
     private static final String CHARS_MIXED_CASE = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final SecureRandom RANDOM = new SecureRandom();
 

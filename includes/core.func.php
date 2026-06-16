@@ -119,7 +119,7 @@ function sec_check()
     if (strpos($_SERVER["SERVER_SOFTWARE"], "kangle") !== false && count(glob("/vhs/kangle/etc/*")) > 1) {
         $_var_6[] = "<li class=\"list-group-item\"><span class=\"btn-sm btn-danger\">高危</span>&nbsp;当前主机为kangle且未设置open_basedir防跨站，会被黑客入侵，请联系主机商修复或更换主机</a></li>";
     }
-    if ($conf["admin_pwd"] === "123456") {
+    if ($conf["admin_pwd"] === md5("123456" . "!@#%!s!0")) {
         $_var_6[] = "<li class=\"list-group-item\"><span class=\"btn-sm btn-danger\">重要</span>&nbsp;请及时修改默认管理员密码 <a href=\"set.php?mod=account\">点此进入网站信息配置修改</a></li>";
     } else {
         if (strlen($conf["admin_pwd"]) < 6 || is_numeric($conf["admin_pwd"]) && strlen($conf["admin_pwd"]) <= 10 || $conf["admin_pwd"] === $conf["kfqq"]) {

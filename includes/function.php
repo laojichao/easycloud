@@ -787,7 +787,7 @@ $strlen +=36;
  return substr($str,0,$length);
 }
 function RandomStr4($length){//随机数字
-$str ='0***REMOVED***';
+$str ='0123456789';
 $strlen =10;
 while($length > $strlen){
 $str .= $str;
@@ -797,7 +797,7 @@ $strlen +=10;
  return substr($str,0,$length);
 }
 function RandomStr5($length){//随机小写字母+数字
-$str ='0***REMOVED***abcdefghijklmnopqrstuvwxyz';
+$str ='0123456789abcdefghijklmnopqrstuvwxyz';
 $strlen =46;
 while($length > $strlen){
 $str .= $str;
@@ -807,7 +807,7 @@ $strlen +=46;
  return substr($str,0,$length);
 }
 function RandomStr6($length){//随机大写字母+数字
-$str ='0***REMOVED***ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+$str ='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 $strlen =46;
 while($length > $strlen){
 $str .= $str;
