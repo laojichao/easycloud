@@ -23,7 +23,7 @@
         <el-table-column prop="uid" label="用户ID" width="80" />
         <el-table-column label="金额" width="100">
           <template #default="{ row }">
-            <span class="mono-text" style="color: var(--neon-amber)">{{ row.amount || '-' }}</span>
+            <span class="mono-text" style="color: var(--neon-amber)">{{ row.money || '-' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="实际到账" width="100">
@@ -67,7 +67,7 @@
     <!-- Approve dialog -->
     <el-dialog v-model="approveDialogVisible" title="批准提现" width="400px">
       <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 13px">
-        用户申请提现: <strong style="color: var(--neon-amber)">{{ approveTarget?.amount }}</strong> 元
+        用户申请提现: <strong style="color: var(--neon-amber)">{{ approveTarget?.money }}</strong> 元
       </p>
       <el-form label-width="100px">
         <el-form-item label="实际到账金额">
@@ -120,7 +120,7 @@ async function loadData() {
 
 function showApproveDialog(row) {
   approveTarget.value = row
-  realMoney.value = row.amount || ''
+  realMoney.value = row.money || ''
   approveDialogVisible.value = true
 }
 

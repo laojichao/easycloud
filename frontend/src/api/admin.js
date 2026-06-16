@@ -436,6 +436,15 @@ export function userLogin(data) {
 }
 
 /**
+ * 获取当前登录用户信息（积分余额、邀请码等）
+ * @returns {Promise<Object>} 返回 { code, data: { uid, username, rmb, points, inviteCode } }
+ * @endpoint GET /api/user/info
+ */
+export function getUserInfo() {
+  return request.get('/api/user/info')
+}
+
+/**
  * 用户签到（每日一次，获取积分奖励）
  * @returns {Promise<Object>} 返回 { code, data: { points } }
  * @endpoint GET /api/user/checkin

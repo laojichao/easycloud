@@ -32,7 +32,7 @@
         <el-table-column prop="ip" label="注册IP" width="130" />
         <el-table-column label="注册时间" width="170">
           <template #default="{ row }">
-            <span class="mono-text" style="font-size: 11px">{{ row.addtime || '-' }}</span>
+            <span class="mono-text" style="font-size: 11px">{{ row.regdate || '-' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="240" fixed="right">

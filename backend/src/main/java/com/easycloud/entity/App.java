@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -52,6 +53,7 @@ public class App {
      * 对应数据库字段 switch（Java 保留字，使用下划线后缀避免冲突）
      */
     @TableField("switch")
+    @JsonProperty("switch")
     private String switch_;
 
     /** IP 绑定验证开关：1=开启，0=关闭 */

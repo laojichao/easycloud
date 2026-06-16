@@ -53,8 +53,7 @@
           <h3 class="section-title"><span class="title-accent">//</span> 签到记录</h3>
           <el-table :data="checkinList" stripe class="cyber-table" size="small" v-loading="checkinListLoading">
             <el-table-column prop="date" label="日期" width="180" />
-            <el-table-column prop="points" label="获得积分" width="120" />
-            <el-table-column prop="remark" label="备注" />
+            <el-table-column prop="reward" label="获得积分" width="120" />
           </el-table>
           <el-empty v-if="!checkinListLoading && checkinList.length === 0" description="暂无签到记录" />
         </div>
@@ -72,8 +71,8 @@
             <el-table-column prop="title" label="标题" />
             <el-table-column prop="status" label="状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.status === 'open' ? 'warning' : 'success'" size="small">
-                  {{ row.status === 'open' ? '处理中' : '已关闭' }}
+                <el-tag :type="row.status === 0 ? 'warning' : row.status === 1 ? 'success' : 'info'" size="small">
+                  {{ row.status === 0 ? '待处理' : row.status === 1 ? '已处理' : '已关闭' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -86,9 +85,9 @@
         <div class="section-block">
           <h3 class="section-title"><span class="title-accent">//</span> 邀请记录</h3>
           <el-table :data="inviteList" stripe class="cyber-table" size="small" v-loading="inviteLoading">
-            <el-table-column prop="username" label="被邀请人" />
-            <el-table-column prop="points" label="获得积分" width="120" />
-            <el-table-column prop="addtime" label="时间" width="180" />
+            <el-table-column prop="qq" label="被邀请人QQ" />
+            <el-table-column prop="money" label="获得奖励" width="120" />
+            <el-table-column prop="creationTime" label="时间" width="180" />
           </el-table>
           <el-empty v-if="!inviteLoading && inviteList.length === 0" description="暂无邀请记录" />
         </div>
@@ -97,15 +96,12 @@
         <div class="section-block">
           <h3 class="section-title"><span class="title-accent">//</span> 积分记录</h3>
           <el-table :data="pointList" stripe class="cyber-table" size="small" v-loading="pointLoading">
-            <el-table-column prop="type" label="类型" width="100">
+            <el-table-column prop="action" label="类型" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.type === 'in' ? 'success' : 'danger'" size="small">
-                  {{ row.type === 'in' ? '收入' : '支出' }}
-                </el-tag>
+                <el-tag size="small">{{ row.action || '-' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="points" label="积分" width="100" />
-            <el-table-column prop="remark" label="备注" />
+            <el-table-column prop="point" label="积分" width="100" />
             <el-table-column prop="addtime" label="时间" width="180" />
           </el-table>
           <el-empty v-if="!pointLoading && pointList.length === 0" description="暂无积分记录" />
@@ -121,11 +117,11 @@
           </div>
           <el-table :data="tixianList" stripe class="cyber-table" size="small" v-loading="tixianLoading">
             <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="amount" label="金额" width="100" />
+            <el-table-column prop="money" label="金额" width="100" />
             <el-table-column prop="status" label="状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.status === 'pending' ? 'warning' : row.status === 'approved' ? 'success' : 'danger'" size="small">
-                  {{ row.status === 'pending' ? '审核中' : row.status === 'approved' ? '已通过' : '已拒绝' }}
+                <el-tag :type="row.status === 0 ? 'warning' : row.status === 1 ? 'success' : 'danger'" size="small">
+                  {{ row.status === 0 ? '审核中' : row.status === 1 ? '已通过' : '已拒绝' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -208,7 +204,8 @@ import {
   userInviteList,
   userPointList,
   applyTixian,
-  userTixianList
+  userTixianList,
+  getUserInfo
 } from '@/api/admin'
 
 const userStore = useUserStore()
@@ -299,6 +296,21 @@ const applyTixianLoading = ref(false)
 const tixianForm = reactive({ amount: '', account: '', name: '', type: 'alipay' })
 
 // ==================== 数据加载函数 ====================
+
+/**
+ * 加载用户基本信息（积分余额、邀请码）
+ */
+async function loadUserInfo() {
+  try {
+    const res = await getUserInfo()
+    if (res.code === 200 && res.data) {
+      userInfo.points = res.data.points || 0
+      userInfo.inviteCode = res.data.inviteCode || ''
+    }
+  } catch (e) {
+    console.error('加载用户信息失败', e)
+  }
+}
 
 /**
  * 加载签到记录列表
@@ -507,6 +519,7 @@ function handleLogout() {
  */
 onMounted(async () => {
   await Promise.all([
+    loadUserInfo(),
     loadCheckinList(),
     loadWorkOrderList(),
     loadInviteList(),

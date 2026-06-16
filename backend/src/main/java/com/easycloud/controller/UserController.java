@@ -50,6 +50,32 @@ public class UserController {
     private final RateLimiterService rateLimiterService;
     private final JwtUtil jwtUtil;
 
+    // ==================== 用户信息 ====================
+
+    /**
+     * 获取当前登录用户信息（积分余额、邀请码等）
+     */
+    @GetMapping("/info")
+    public Result<?> getUserInfo(HttpServletRequest request) {
+        try {
+            Long uid = getUid(request);
+            User user = userService.getByUid(uid);
+            if (user == null) {
+                return Result.fail("用户不存在");
+            }
+            Map<String, Object> data = new HashMap<>();
+            data.put("uid", user.getUid());
+            data.put("username", user.getUser());
+            data.put("rmb", user.getRmb());
+            data.put("qq", user.getQq());
+            data.put("points", pointService.getTotal(uid));
+            data.put("inviteCode", user.getUid().toString());
+            return Result.ok(data);
+        } catch (RuntimeException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
     // ==================== 登录/注册 ====================
 
     /**
