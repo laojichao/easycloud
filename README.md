@@ -176,3 +176,16 @@ java -jar target/easycloud-backend-1.0.0-SNAPSHOT.jar
 ## 许可证
 
 MIT
+
+## 安全配置（部署必读）
+
+仓库中不含任何密钥材料，以下三项必须在部署环境自行提供：
+
+1. JWT 密钥：设置环境变量 JWT_SECRET（至少 32 字节随机串）。生产环境务必设置，否则使用内置占位默认值。
+2. 管理员口令：数据库初始化不再内置默认口令，部署后执行：
+   UPDATE yixi_config SET v = '新口令明文或 md5(新口令 + !@#%!s!0)' WHERE k = 'admin_pwd';
+3. RSA 私钥（PHP 兼容接口签名用）：通过环境变量 EASYCLOUD_RSA_PRIVATE_KEY 提供，
+   或放置于 includes/class/private.local.php（已在 .gitignore 忽略）并定义 $private_key。
+
+注意：历史上曾误提交 RSA 私钥，已通过重写 git 历史清除；旧提交仍可能被 GitHub/第三方缓存，
+如需彻底清除请联系 GitHub Support 处理，并且必须轮换该密钥对（视为已泄露）。

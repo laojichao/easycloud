@@ -72,7 +72,7 @@ const apiList = [
     response: JSON.stringify({
       code: 200,
       msg: { version: '1.0.0', version_info: '更新说明', app_update_url: '...', app_update_must: 'n', api_total: 1000 },
-      time: ***REMOVED***0,
+      time: 1700000000000,
       check: 'md5签名'
     }, null, 2)
   },
@@ -84,7 +84,7 @@ const apiList = [
     response: JSON.stringify({
       code: 200,
       msg: { app_gg: '公告内容' },
-      time: ***REMOVED***0,
+      time: 1700000000000,
       check: 'md5签名'
     }, null, 2)
   },
@@ -98,7 +98,7 @@ const apiList = [
     response: JSON.stringify({
       code: 200,
       msg: [{ file_url: 'https://...', date: '2024-01-01', note: '说明' }],
-      time: ***REMOVED***0,
+      time: 1700000000000,
       check: 'md5签名'
     }, null, 2)
   },
@@ -112,8 +112,8 @@ const apiList = [
     ],
     response: JSON.stringify({
       code: 200,
-      msg: { kami: 'xxxx-xxxx-xxxx', vip: '***REMOVED***0' },
-      time: ***REMOVED***0,
+      msg: { kami: 'xxxx-xxxx-xxxx', vip: '1700000000000' },
+      time: 1700000000000,
       check: 'md5签名'
     }, null, 2)
   },
@@ -128,7 +128,7 @@ const apiList = [
     response: JSON.stringify({
       code: 200,
       msg: '卡密解绑成功',
-      time: ***REMOVED***0,
+      time: 1700000000000,
       check: 'md5签名'
     }, null, 2)
   }

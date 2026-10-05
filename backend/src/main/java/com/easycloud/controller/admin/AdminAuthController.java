@@ -44,8 +44,9 @@ public class AdminAuthController {
         String configUser = configService.getSetting("admin_user");
         String configPwd = configService.getSetting("admin_pwd");
 
-        if (configUser == null || configPwd == null) {
-            return Result.fail("系统未配置管理员账号");
+        // 仓库不再内置默认口令：admin_pwd 为空视为未初始化
+        if (configUser == null || configUser.isBlank() || configPwd == null || configPwd.isBlank()) {
+            return Result.fail("系统未配置管理员口令，请先初始化 admin_pwd");
         }
 
         // 密码验证: 兼容 PHP 明文存储 和 Java md5 存储
@@ -56,8 +57,8 @@ public class AdminAuthController {
             return Result.fail("用户名或密码错误");
         }
 
-        // 生成 JWT Token
-        String token = jwtUtil.generateToken(username);
+        // 生成 admin 角色 JWT Token
+        String token = jwtUtil.generateAdminToken(username);
 
         Map<String, Object> data = new HashMap<>();
         data.put("token", token);

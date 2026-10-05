@@ -30,7 +30,8 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
         }
 
         token = token.substring(7);
-        if (!jwtUtil.validateToken(token)) {
+        // 仅接受 admin 角色令牌
+        if (!jwtUtil.validateAdminToken(token)) {
             writeError(response, 401, "Token已过期或无效");
             return false;
         }

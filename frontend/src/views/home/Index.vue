@@ -16,6 +16,8 @@
         <div class="nav-links">
           <router-link to="/" class="nav-link active">首页</router-link>
           <router-link to="/docs" class="nav-link">API 文档</router-link>
+          <router-link to="/login" class="nav-link">登录</router-link>
+          <router-link to="/register" class="nav-link">注册</router-link>
           <router-link to="/admin/login" class="nav-cta">管理后台</router-link>
         </div>
       </div>

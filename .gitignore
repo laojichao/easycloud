@@ -37,3 +37,15 @@ uploads/
 
 # Claude
 .claude/
+
+# Secrets / keys (never commit)
+*.pem
+*.key
+*.p12
+*.jks
+includes/class/private.local.php
+*.local.php
+.secrets-replace.txt
+
+# Local tooling (python bootstrap in workspace)
+Python/

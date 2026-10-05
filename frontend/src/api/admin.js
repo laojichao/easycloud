@@ -144,3 +144,137 @@ export function changePassword(data) {
 export function changeAccount(data) {
   return request.post('/api/admin/setting/change-account', data)
 }
+
+// ========== 用户管理 ==========
+export function getUserList(params) {
+  return request.get('/api/admin/users', { params })
+}
+
+export function getUser(uid) {
+  return request.get('/api/admin/users/' + uid)
+}
+
+export function createUser(data) {
+  return request.post('/api/admin/users', data)
+}
+
+export function updateUser(uid, data) {
+  return request.put('/api/admin/users/' + uid, data)
+}
+
+export function deleteUser(uid) {
+  return request.delete('/api/admin/users/' + uid)
+}
+
+export function adjustUserRmb(uid, amount) {
+  return request.post('/api/admin/users/' + uid + '/rmb', { amount })
+}
+
+// ========== 工单管理 ==========
+export function getWorkOrderList(params) {
+  return request.get('/api/admin/workorders', { params })
+}
+
+export function replyWorkOrder(id, reply) {
+  return request.post('/api/admin/workorders/' + id + '/reply', { reply })
+}
+
+export function closeWorkOrder(id) {
+  return request.post('/api/admin/workorders/' + id + '/close')
+}
+
+// ========== 提现审核 ==========
+export function getTixianList(params) {
+  return request.get('/api/admin/tixian', { params })
+}
+
+export function approveTixian(id, realmoney) {
+  return request.post('/api/admin/tixian/' + id + '/approve', { realmoney })
+}
+
+export function rejectTixian(id) {
+  return request.post('/api/admin/tixian/' + id + '/reject')
+}
+
+// ========== 支付订单 ==========
+export function getPayOrderList(params) {
+  return request.get('/api/admin/pay/orders', { params })
+}
+
+export function getPayOrderDetail(orderNo) {
+  return request.get('/api/admin/pay/orders/' + orderNo)
+}
+
+export function refundPayOrder(orderNo) {
+  return request.post('/api/admin/pay/refund/' + orderNo)
+}
+
+// ========== 系统设置扩展 ==========
+export function getMessages(params) {
+  return request.get('/api/admin/setting/messages', { params })
+}
+
+export function createMessage(data) {
+  return request.post('/api/admin/setting/messages', data)
+}
+
+export function mailTest(to) {
+  return request.post('/api/admin/setting/mail-test', { to })
+}
+
+export function dbOptim() {
+  return request.post('/api/admin/setting/db-optim')
+}
+
+export function dbRepair() {
+  return request.post('/api/admin/setting/db-repair')
+}
+
+export function getApiKey() {
+  return request.get('/api/admin/setting/api-key')
+}
+
+export function generateApiKey() {
+  return request.post('/api/admin/setting/api-key')
+}
+
+export function getApiIp() {
+  return request.get('/api/admin/setting/api-ip')
+}
+
+export function saveApiIp(data) {
+  return request.post('/api/admin/setting/api-ip', { data })
+}
+
+export function getSites(params) {
+  return request.get('/api/admin/setting/sites', { params })
+}
+
+export function updateSiteEndtime(id, num) {
+  return request.post('/api/admin/setting/sites/' + id + '/endtime', { num })
+}
+
+export function getTransferConfig() {
+  return request.get('/api/admin/setting/transfer-config')
+}
+
+export function saveTransferConfig(data) {
+  return request.post('/api/admin/setting/transfer-config', data)
+}
+
+export function doTransfer(id) {
+  return request.post('/api/admin/setting/transfer', { id })
+}
+
+export function getApiJk(proid) {
+  return request.get('/api/admin/setting/api-jk', { params: { proid } })
+}
+
+// ========== 统计扩展 ==========
+export function getCheckinStats() {
+  return request.get('/api/admin/stats/checkin-stats')
+}
+
+export function getPendingCounts() {
+  return request.get('/api/admin/stats/pending-counts')
+}

@@ -1,5 +1,6 @@
 <?php
-include_once ROOT."includes/class/private.php";
+// private.php 仅提供私钥（可能不存在，私钥应由环境变量或本地文件提供）
+if (is_file(ROOT."includes/class/private.php")) { include_once ROOT."includes/class/private.php"; }
 class Rsa{
 
     /**

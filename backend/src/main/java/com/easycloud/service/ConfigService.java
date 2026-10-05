@@ -2,6 +2,8 @@ package com.easycloud.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.easycloud.entity.SysConfig;
+import lombok.extern.slf4j.Slf4j;
+import lombok.extern.slf4j.Slf4j;
 import com.easycloud.mapper.SysConfigMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -11,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConfigService {
@@ -25,20 +28,27 @@ public class ConfigService {
      * 优先从 Redis Hash 读取；未命中则查 DB 并回写 Redis。
      */
     public String getSetting(String key) {
-        // 1. 先查 Redis
-        Object val = stringRedisTemplate.opsForHash().get(REDIS_KEY, key);
-        if (val != null) {
-            return val.toString();
+        // 1. 先查 Redis（Redis 不可用时降级为直查 DB）
+        try {
+            Object val = stringRedisTemplate.opsForHash().get(REDIS_KEY, key);
+            if (val != null) {
+                return val.toString();
+            }
+        } catch (Exception e) {
+            log.debug("Redis 读取失败，降级查库: {}", e.getMessage());
         }
 
-        // 2. Redis 未命中，查 DB
+        // 2. 查 DB
         SysConfig config = sysConfigMapper.selectById(key);
         if (config == null) {
             return null;
         }
 
-        // 3. 回写 Redis
-        stringRedisTemplate.opsForHash().put(REDIS_KEY, key, config.getV());
+        // 3. 尽力回写 Redis
+        try {
+            stringRedisTemplate.opsForHash().put(REDIS_KEY, key, config.getV());
+        } catch (Exception ignored) {
+        }
         return config.getV();
     }
 
@@ -50,10 +60,18 @@ public class ConfigService {
         SysConfig config = new SysConfig();
         config.setK(key);
         config.setV(value);
-        sysConfigMapper.insertOrUpdate(config);
+        if (sysConfigMapper.selectById(key) == null) {
+            sysConfigMapper.insert(config);
+        } else {
+            sysConfigMapper.updateById(config);
+        }
 
-        // 同步更新 Redis
-        stringRedisTemplate.opsForHash().put(REDIS_KEY, key, value);
+        // 同步更新 Redis（失败不影响落库）
+        try {
+            stringRedisTemplate.opsForHash().put(REDIS_KEY, key, value);
+        } catch (Exception e) {
+            log.warn("Redis 写入失败: {}", e.getMessage());
+        }
     }
 
     /**
@@ -62,7 +80,12 @@ public class ConfigService {
      */
     public Map<String, String> getAllSettings() {
         // 1. 先查 Redis
-        Map<Object, Object> redisEntries = stringRedisTemplate.opsForHash().entries(REDIS_KEY);
+        Map<Object, Object> redisEntries = null;
+        try {
+            redisEntries = stringRedisTemplate.opsForHash().entries(REDIS_KEY);
+        } catch (Exception e) {
+            log.debug("Redis 读取失败，降级查库: {}", e.getMessage());
+        }
         if (redisEntries != null && !redisEntries.isEmpty()) {
             Map<String, String> result = new HashMap<>(redisEntries.size());
             redisEntries.forEach((k, v) -> result.put(k.toString(), v.toString()));
@@ -76,9 +99,11 @@ public class ConfigService {
             result.put(c.getK(), c.getV());
         }
 
-        // 3. 回写 Redis
-        Map<String, String> redisMap = new HashMap<>(result);
-        stringRedisTemplate.opsForHash().putAll(REDIS_KEY, redisMap);
+        // 3. 尽力回写 Redis
+        try {
+            stringRedisTemplate.opsForHash().putAll(REDIS_KEY, result);
+        } catch (Exception ignored) {
+        }
 
         return result;
     }
@@ -93,10 +118,27 @@ public class ConfigService {
             redisMap.put(c.getK(), c.getV());
         }
 
-        // 先清除旧缓存，再写入
-        stringRedisTemplate.delete(REDIS_KEY);
-        if (!redisMap.isEmpty()) {
-            stringRedisTemplate.opsForHash().putAll(REDIS_KEY, redisMap);
+        // 先清除旧缓存，再写入（Redis 不可用时仅提示）
+        try {
+            stringRedisTemplate.delete(REDIS_KEY);
+            if (!redisMap.isEmpty()) {
+                stringRedisTemplate.opsForHash().putAll(REDIS_KEY, redisMap);
+            }
+        } catch (Exception e) {
+            log.warn("Redis 缓存刷新失败: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 敏感配置脱敏：保留首尾各 4 位，中间以 **** 代替
+     */
+    public String maskKey(String value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.length() <= 8) {
+            return "****";
+        }
+        return value.substring(0, 4) + "****" + value.substring(value.length() - 4);
     }
 }

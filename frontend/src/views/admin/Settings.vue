@@ -21,7 +21,7 @@
       </div>
 
       <div class="tab-content">
-        <!-- Site settings -->
+        <!-- 站点设置 -->
         <div v-if="activeTab === 'site'" class="form-section">
           <h3 class="section-label">站点基本配置</h3>
           <div class="form-grid">
@@ -50,17 +50,17 @@
           </div>
         </div>
 
-        <!-- Password -->
+        <!-- 密码与账号 -->
         <div v-if="activeTab === 'password'" class="form-section">
           <h3 class="section-label">修改管理员密码</h3>
           <div class="form-grid" style="max-width: 400px">
             <div class="form-item">
               <label>旧密码</label>
-              <input v-model="pwdForm.old_password" type="password" class="neon-input" placeholder="当前密码" />
+              <input v-model="pwdForm.oldPassword" type="password" class="neon-input" placeholder="当前密码" />
             </div>
             <div class="form-item">
               <label>新密码</label>
-              <input v-model="pwdForm.new_password" type="password" class="neon-input" placeholder="新密码（≥6位）" />
+              <input v-model="pwdForm.newPassword" type="password" class="neon-input" placeholder="新密码（≥6位）" />
             </div>
           </div>
           <div class="form-actions">
@@ -69,21 +69,75 @@
               修改密码
             </el-button>
           </div>
+
+          <h3 class="section-label" style="margin-top: 40px">修改管理员账号</h3>
+          <div class="form-grid" style="max-width: 400px">
+            <div class="form-item">
+              <label>新用户名</label>
+              <input v-model="accountForm.username" class="neon-input" placeholder="新的管理员用户名" />
+            </div>
+            <div class="form-item">
+              <label>当前密码</label>
+              <input v-model="accountForm.password" type="password" class="neon-input" placeholder="验证当前密码" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <el-button type="primary" :loading="changingAccount" @click="handleChangeAccount">
+              <el-icon><User /></el-icon>
+              修改账号
+            </el-button>
+          </div>
         </div>
 
-        <!-- Maintenance -->
+        <!-- 系统维护 -->
         <div v-if="activeTab === 'maintenance'" class="form-section">
           <h3 class="section-label">系统维护</h3>
           <div class="maintenance-actions">
             <div class="maint-card">
-              <div class="maint-icon" style="color: var(--neon-amber)">
+              <div class="maint-icon" style="color: var(--neon-cyan)">
                 <el-icon :size="28"><Refresh /></el-icon>
               </div>
               <div class="maint-info">
                 <span class="maint-title">刷新缓存</span>
                 <span class="maint-desc">从数据库重新加载配置到 Redis 缓存</span>
               </div>
-              <el-button type="warning" @click="handleRefreshCache">执行</el-button>
+              <el-button type="warning" :loading="cacheLoading" @click="handleRefreshCache">执行</el-button>
+            </div>
+
+            <div class="maint-card">
+              <div class="maint-icon" style="color: var(--neon-green)">
+                <el-icon :size="28"><Cpu /></el-icon>
+              </div>
+              <div class="maint-info">
+                <span class="maint-title">数据库优化</span>
+                <span class="maint-desc">对所有数据表执行 OPTIMIZE TABLE，回收空间并整理碎片</span>
+              </div>
+              <el-button type="warning" :loading="optimLoading" @click="handleDbOptim">执行</el-button>
+            </div>
+
+            <div class="maint-card">
+              <div class="maint-icon" style="color: var(--neon-magenta)">
+                <el-icon :size="28"><FirstAidKit /></el-icon>
+              </div>
+              <div class="maint-info">
+                <span class="maint-title">数据库修复</span>
+                <span class="maint-desc">对所有数据表执行 REPAIR TABLE，尝试修复损坏的表</span>
+              </div>
+              <el-button type="danger" :loading="repairLoading" @click="handleDbRepair">执行</el-button>
+            </div>
+
+            <div class="maint-card">
+              <div class="maint-icon" style="color: var(--neon-purple)">
+                <el-icon :size="28"><Promotion /></el-icon>
+              </div>
+              <div class="maint-info">
+                <span class="maint-title">邮件发送测试</span>
+                <span class="maint-desc">使用系统邮件配置向指定邮箱发送一封测试邮件</span>
+                <div class="mail-test-row">
+                  <input v-model="mailTo" class="neon-input" style="max-width: 220px" placeholder="接收测试邮件的邮箱" />
+                  <el-button type="primary" size="small" :loading="mailLoading" @click="handleMailTest">发送</el-button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -95,16 +149,25 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Setting, Lock, Refresh, Check } from '@element-plus/icons-vue'
-import { getSettings, saveSettings, refreshCache, changePassword } from '@/api/admin'
+import { Setting, Lock, Refresh, Check, User, Cpu, FirstAidKit, Promotion } from '@element-plus/icons-vue'
+import {
+  getSettings, saveSettings, refreshCache, changePassword, changeAccount,
+  dbOptim, dbRepair, mailTest
+} from '@/api/admin'
 
 const activeTab = ref('site')
 const saving = ref(false)
 const changingPwd = ref(false)
+const changingAccount = ref(false)
+const cacheLoading = ref(false)
+const optimLoading = ref(false)
+const repairLoading = ref(false)
+const mailLoading = ref(false)
+const mailTo = ref('')
 
 const tabs = [
   { key: 'site', label: '站点设置', icon: 'Setting' },
-  { key: 'password', label: '修改密码', icon: 'Lock' },
+  { key: 'password', label: '密码与账号', icon: 'Lock' },
   { key: 'maintenance', label: '系统维护', icon: 'Refresh' },
 ]
 
@@ -116,8 +179,13 @@ const settings = reactive({
 })
 
 const pwdForm = reactive({
-  old_password: '',
-  new_password: ''
+  oldPassword: '',
+  newPassword: ''
+})
+
+const accountForm = reactive({
+  username: '',
+  password: ''
 })
 
 onMounted(async () => {
@@ -150,8 +218,12 @@ async function handleSave() {
 }
 
 async function handleChangePwd() {
-  if (!pwdForm.old_password || !pwdForm.new_password) {
+  if (!pwdForm.oldPassword || !pwdForm.newPassword) {
     ElMessage.warning('请填写完整')
+    return
+  }
+  if (pwdForm.newPassword.length < 6) {
+    ElMessage.warning('新密码至少6位')
     return
   }
   changingPwd.value = true
@@ -159,8 +231,8 @@ async function handleChangePwd() {
     const res = await changePassword(pwdForm)
     if (res.code === 200) {
       ElMessage.success('密码修改成功')
-      pwdForm.old_password = ''
-      pwdForm.new_password = ''
+      pwdForm.oldPassword = ''
+      pwdForm.newPassword = ''
     } else {
       ElMessage.error(res.msg || '修改失败')
     }
@@ -169,10 +241,83 @@ async function handleChangePwd() {
   }
 }
 
+async function handleChangeAccount() {
+  if (!accountForm.username || !accountForm.password) {
+    ElMessage.warning('请填写新用户名与当前密码')
+    return
+  }
+  changingAccount.value = true
+  try {
+    const res = await changeAccount(accountForm)
+    if (res.code === 200) {
+      ElMessage.success('账号修改成功，下次登录请使用新用户名')
+      accountForm.username = ''
+      accountForm.password = ''
+    } else {
+      ElMessage.error(res.msg || '修改失败')
+    }
+  } finally {
+    changingAccount.value = false
+  }
+}
+
 async function handleRefreshCache() {
-  const res = await refreshCache()
-  if (res.code === 200) {
-    ElMessage.success('缓存刷新成功')
+  cacheLoading.value = true
+  try {
+    const res = await refreshCache()
+    if (res.code === 200) {
+      ElMessage.success('缓存刷新成功')
+    } else {
+      ElMessage.error(res.msg || '刷新失败')
+    }
+  } finally {
+    cacheLoading.value = false
+  }
+}
+
+async function handleDbOptim() {
+  optimLoading.value = true
+  try {
+    const res = await dbOptim()
+    if (res.code === 200) {
+      ElMessage.success(res.msg || '数据库优化完成')
+    } else {
+      ElMessage.error(res.msg || '优化失败')
+    }
+  } finally {
+    optimLoading.value = false
+  }
+}
+
+async function handleDbRepair() {
+  repairLoading.value = true
+  try {
+    const res = await dbRepair()
+    if (res.code === 200) {
+      ElMessage.success(res.msg || '数据库修复完成')
+    } else {
+      ElMessage.error(res.msg || '修复失败')
+    }
+  } finally {
+    repairLoading.value = false
+  }
+}
+
+async function handleMailTest() {
+  if (!mailTo.value || mailTo.value.indexOf('@') < 0) {
+    ElMessage.warning('请输入正确的邮箱地址')
+    return
+  }
+  mailLoading.value = true
+  try {
+    const res = await mailTest(mailTo.value)
+    if (res.code === 200) {
+      ElMessage.success(res.msg || '测试邮件已发送')
+    } else {
+      ElMessage.error(res.msg || '发送失败')
+    }
+  } finally {
+    mailLoading.value = false
   }
 }
 </script>
@@ -335,7 +480,7 @@ async function handleRefreshCache() {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 170, 0, 0.08);
+    background: rgba(255, 255, 255, 0.03);
     border-radius: var(--radius-sm);
     flex-shrink: 0;
   }
@@ -356,6 +501,13 @@ async function handleRefreshCache() {
     .maint-desc {
       font-size: 12px;
       color: var(--text-dim);
+    }
+
+    .mail-test-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 6px;
     }
   }
 }

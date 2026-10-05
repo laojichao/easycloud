@@ -16,19 +16,32 @@
         <p class="subtitle">授权验证系统</p>
       </div>
 
-      <el-form :model="form" label-width="0" size="large">
+      <el-form :model="form" label-width="0" size="large" @keyup.enter="handleLogin">
         <el-form-item>
           <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" />
         </el-form-item>
         <el-form-item>
           <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password />
         </el-form-item>
+        <el-form-item v-if="captchaEnabled">
+          <div class="captcha-row">
+            <el-input v-model="form.captchaCode" placeholder="验证码" prefix-icon="Key" />
+            <img
+              v-if="captchaImage"
+              :src="captchaImage"
+              class="captcha-img"
+              title="点击刷新验证码"
+              @click="loadCaptcha"
+            />
+          </div>
+        </el-form-item>
         <el-form-item>
-          <el-button type="primary" class="login-btn" disabled>登 录（暂未开放）</el-button>
+          <el-button type="primary" class="login-btn" :loading="loading" @click="handleLogin">登 录</el-button>
         </el-form-item>
       </el-form>
 
       <div class="card-footer">
+        <router-link to="/register" class="footer-link">注册账号</router-link>
         <router-link to="/" class="footer-link">返回首页</router-link>
         <router-link to="/admin/login" class="footer-link">管理后台</router-link>
       </div>
@@ -37,12 +50,74 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { getCaptcha } from '@/api/user'
+import { useUserStore } from '@/stores/user'
+
+const router = useRouter()
+const userStore = useUserStore()
+const loading = ref(false)
+
+const captchaEnabled = ref(false)
+const captchaImage = ref('')
 
 const form = reactive({
   username: '',
-  password: ''
+  password: '',
+  captchaId: '',
+  captchaCode: ''
 })
+
+async function loadCaptcha() {
+  try {
+    const res = await getCaptcha()
+    if (res.code === 200) {
+      captchaEnabled.value = !!res.data?.enabled
+      if (captchaEnabled.value) {
+        captchaImage.value = res.data.image || ''
+        form.captchaId = res.data.captchaId || ''
+        form.captchaCode = ''
+      }
+    }
+  } catch (e) {
+    captchaEnabled.value = false
+  }
+}
+
+async function handleLogin() {
+  if (!form.username || !form.password) {
+    ElMessage.warning('请输入用户名和密码')
+    return
+  }
+  if (captchaEnabled.value && !form.captchaCode) {
+    ElMessage.warning('请输入验证码')
+    return
+  }
+  loading.value = true
+  try {
+    const res = await userStore.userLogin({
+      username: form.username,
+      password: form.password,
+      captchaId: form.captchaId || undefined,
+      captchaCode: form.captchaCode || undefined
+    })
+    if (res.code === 200) {
+      ElMessage.success('登录成功')
+      router.push('/user')
+    } else {
+      ElMessage.error(res.msg || '登录失败')
+      if (captchaEnabled.value) loadCaptcha()
+    }
+  } catch (e) {
+    if (captchaEnabled.value) loadCaptcha()
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadCaptcha)
 </script>
 
 <style scoped lang="scss">
@@ -137,6 +212,19 @@ const form = reactive({
     margin-top: 6px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
+  }
+}
+
+.captcha-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+
+  .captcha-img {
+    height: 40px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 1px solid var(--border-subtle);
   }
 }
 
