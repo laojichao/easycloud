@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -13,6 +14,7 @@ import java.util.Date;
 /**
  * JWT 工具：管理员（subject=用户名）与用户（subject=uid）双角色令牌
  */
+@Slf4j
 @Component
 public class JwtUtil {
 
@@ -20,13 +22,27 @@ public class JwtUtil {
     public static final String ROLE_USER = "user";
     private static final String CLAIM_ROLE = "role";
 
-    @Value("${jwt.secret:easycloud-default-secret-key-must-be-32-chars-long!!}")
+    @Value("${jwt.secret:}")
     private String secret;
 
     @Value("${jwt.expiration:86400000}")
     private long expiration; // 默认24小时
 
+    /** 未配置 jwt.secret 时（开发环境）使用的进程内临时密钥，重启即失效 */
+    private volatile SecretKey ephemeralKey;
+
     private SecretKey getSigningKey() {
+        if (secret == null || secret.isBlank()) {
+            if (ephemeralKey == null) {
+                synchronized (this) {
+                    if (ephemeralKey == null) {
+                        ephemeralKey = Jwts.SIG.HS256.key().build();
+                        log.warn("未配置 jwt.secret，已启用进程内临时随机密钥（仅开发用，重启后旧 Token 失效；生产必须设置 JWT_SECRET）");
+                    }
+                }
+            }
+            return ephemeralKey;
+        }
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
